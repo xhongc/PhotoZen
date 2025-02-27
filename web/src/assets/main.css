@@ -1,4 +1,26 @@
-@import './base.css';
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply min-h-screen bg-base-200;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply btn btn-primary;
+  }
+  
+  .card-photo {
+    @apply card bg-base-100 shadow-xl hover:shadow-2xl transition-shadow duration-300;
+  }
+  
+  .photo-grid {
+    @apply grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4;
+  }
+}
 
 #app {
   max-width: 1280px;
