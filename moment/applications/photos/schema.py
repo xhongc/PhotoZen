@@ -1,12 +1,8 @@
 from datetime import datetime
-from typing import List, Optional, Type
+from typing import List
 
 from django.contrib.auth import get_user_model
-from django.contrib.auth.models import AbstractUser, Group
-from ninja_extra import status
-from ninja_extra.exceptions import APIException
-from ninja_schema import ModelSchema, Schema, model_validator
-from pydantic import validator
+from ninja_schema import Schema
 
 UserModel = get_user_model()
 
