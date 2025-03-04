@@ -78,7 +78,4 @@ const formatDate = (dateString: string) => {
 </script>
 
 <style scoped>
-.modal-box {
-  @apply p-0;
-}
 </style>

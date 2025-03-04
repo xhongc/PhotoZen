@@ -13,6 +13,7 @@
     "format": "prettier --write src/"
   },
   "dependencies": {
+    "@tailwindcss/vite": "^4.0.9",
     "axios": "^1.8.1",
     "pinia": "^3.0.1",
     "vue": "^3.5.13",
@@ -34,7 +35,7 @@
     "npm-run-all2": "^7.0.2",
     "postcss": "^8.5.3",
     "prettier": "^3.5.1",
-    "tailwindcss": "^4.0.9",
+    "tailwindcss": "^3.4.17",
     "typescript": "~5.7.3",
     "vite": "^6.1.0",
     "vite-plugin-vue-devtools": "^7.7.2",

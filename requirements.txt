@@ -6,3 +6,5 @@ pydantic==2.10.6
 pydantic_core==2.27.2
 sqlparse==0.5.3
 typing_extensions==4.12.2
+django-ninja-jwt==5.3.5
+ninja_extra==0.5.3

@@ -6,7 +6,6 @@ const router = createRouter({
   routes: [
     {
       path: '/',
-      name: 'home',
       component: HomeView,
     },
     {
@@ -18,6 +17,16 @@ const router = createRouter({
       path: '/upload',
       name: 'upload',
       component: () => import('../views/UploadView.vue'),
+    },
+    {
+      path: '/albums',
+      name: 'albums',
+      component: () => import('../views/AlbumsView.vue'),
+    },
+    {
+      path: '/tags',
+      name: 'tags',
+      component: () => import('../views/TagsView.vue'),
     },
     {
       path: '/about',
