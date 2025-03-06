@@ -1,8 +1,7 @@
 # 1Moment
 记录生活之美，留住珍贵时刻 —— 1Monent
 
-1Moment是一个基于Django和Vue3的全栈项目。
-
+Music tag web 作者的 NAS相册管理软件
 ## 项目结构
 
 ```
