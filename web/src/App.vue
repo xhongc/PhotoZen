@@ -1,15 +1,12 @@
-<script setup lang="ts">
-import { RouterLink, RouterView } from 'vue-router'
-import HelloWorld from './components/HelloWorld.vue'
-</script>
-
 <template>
   <header>
   </header>
-
-  <RouterView />
+  <magic-menu></magic-menu>
 </template>
 
+<script lang="ts" setup>
+import MagicMenu from './components/magicMenu/index.vue'
+</script>
 <style>
 header {
   line-height: 1.5;
