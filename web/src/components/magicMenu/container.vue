@@ -1,8 +1,6 @@
 <template>
-    <div id="container">
-        <keep-alive include="library">
-            <router-view />
-        </keep-alive>
+    <div id="container" class="bg-base-200">
+        <router-view />
     </div>
 </template>
 

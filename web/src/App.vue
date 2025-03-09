@@ -1,11 +1,15 @@
 <template>
   <header>
   </header>
-  <magic-menu></magic-menu>
+  <magic-menu v-if="$route.name !== 'login'"></magic-menu>
+  <div v-else style="height: 100%;">
+    <login></login>
+  </div>
 </template>
 
 <script lang="ts" setup>
 import MagicMenu from './components/magicMenu/index.vue'
+import Login from './views/auth/LoginView.vue'
 </script>
 <style>
 header {
@@ -68,5 +72,9 @@ nav a:first-of-type {
     padding: 1rem 0;
     margin-top: 1rem;
   }
+}
+
+.h-screen-header {
+  height: calc(100vh - 70px);
 }
 </style>

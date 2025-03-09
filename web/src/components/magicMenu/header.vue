@@ -1,6 +1,6 @@
 <template>
     <div>
-        <div class="flex items-center md:px-2 pt-1 bg-base-100 md:bg-base-200">
+        <div class="flex items-center md:px-2 pt-1 bg-base-200 md:bg-base-200">
             <div class="flex items-center md:bg-base-100 flex-1 rounded-xl md:mr-2 h-16 md:shadow-sm">
                 <div class="ml-1 mr-auto indicator">
                     <div class="dropdown sm:hidden">
@@ -12,14 +12,7 @@
                             </svg>
                         </div>
                     </div>
-                    <a class="btn btn-ghost normal-case text-xl">Music Tag Web</a>
-                    <div class="!hidden md:!block">
-                        <span class="relative flex h-3 w-3" v-if="role === 'V1'" @click="showActiceCode = true">
-                          <span class="animate-ping-6 absolute inline-flex badge badge-neutral opacity-50"></span>
-                          <span class="relative inline-flex rounded-full badge badge-neutral cursor-pointer">{{role}}</span>
-                        </span>
-                        <div class="badge badge-neutral cursor-pointer" v-else @click="showActiceCode = true">{{ role }}</div>
-                    </div>
+                    <a class="btn btn-ghost normal-case text-xl">PhotoZen</a>
                 </div>
                 <div class="mr-auto !hidden md:!block">
                     <ul class="menu menu-horizontal px-1" v-if="role === 'V2'">
@@ -1307,8 +1300,6 @@
                             </div>
                         </div>
                     </div>
-                    <div class="text-xl font-medium mb-1 mt-2">隐藏背景图</div>
-                    <input type="checkbox" class="toggle mb-1" v-model="isHiddenBGP"/>
                 </div>
             </div>
         </div>
@@ -1390,42 +1381,42 @@ const header = ref({
       name: '首页',
       id: 3,
       show: true,
-      pathName: 'index',
+      pathName: 'home',
       role: 'V2'
     },
     {
-      name: '操作台', 
+      name: '照片', 
       id: 1,
       show: true,
-      pathName: 'home',
+      pathName: 'photos',
       role: 'V1'
     },
     {
-      name: '操作记录',
+      name: '相册',
       id: 6, 
       show: true,
-      pathName: 'log',
+      pathName: 'albums',
       role: 'V1'
     },
     {
-      name: '插件管理',
+      name: '文件',
       id: 4,
       show: true, 
-      pathName: 'mod',
+      pathName: 'file',
       role: 'V2'
     },
     {
-      name: '音乐收藏',
+      name: '探索',
       id: 2,
       show: true,
-      pathName: 'library', 
+      pathName: 'expore', 
       role: 'V2'
     },
     {
-      name: '系统设置',
+      name: '设置',
       id: 5,
       show: true,
-      pathName: 'system',
+      pathName: 'settings',
       role: 'V2'
     }
   ],

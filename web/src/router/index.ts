@@ -1,11 +1,13 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import HomeView from '../views/about/AboutView.vue'
+import HomeView from '../views/home/index.vue'
+import settingsRoutes from './settings'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
     {
       path: '/',
+      name: 'home',
       component: HomeView,
     },
     {
@@ -34,10 +36,16 @@ const router = createRouter({
       component: () => import('../views/tags/TagsView.vue'),
     },
     {
-      path: '/about',
-      name: 'about',
-      component: () => import('../views/about/AboutView.vue'),
+      path: '/file',
+      name: 'file',
+      component: () => import('../views/file/index.vue'),
     },
+    {
+      path: '/expore',
+      name: 'expore',
+      component: () => import('../views/expore/index.vue'),
+    },
+    ...settingsRoutes
   ],
 })
 

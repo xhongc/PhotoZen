@@ -1,48 +1,60 @@
 <template>
-  <div class="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-    <div class="max-w-md w-full space-y-8">
-      <div>
-        <h2 class="mt-6 text-center text-3xl font-extrabold text-gray-900">
-          登录到您的账户
-        </h2>
+  <div class="w-full h-screen bg-gradient-to-r from-blue-50 to-indigo-50 flex items-center justify-center p-6 bg-base-200">
+    <div class="bg-base-100 bg-opacity-70 backdrop-filter backdrop-blur-md rounded-xl shadow-lg p-8 w-full max-w-md">
+      <div class="flex justify-center mb-8">
+        <div class="flex items-center">
+          <i class="fas fa-cloud text-primary-500 text-4xl mr-3"></i>
+          <h1 class="text-3xl font-bold text-gray-800">PhotoZen</h1>
+        </div>
       </div>
-      <form class="mt-8 space-y-6" @submit.prevent="handleLogin">
-        <div class="rounded-md shadow-sm -space-y-px">
-          <div>
-            <label for="username" class="sr-only">用户名</label>
-            <input
-              id="username"
-              name="username"
-              type="text"
-              required
-              v-model="username"
-              class="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
-              placeholder="用户名"
-            />
-          </div>
-          <div>
-            <label for="password" class="sr-only">密码</label>
-            <input
-              id="password"
-              name="password"
-              type="password"
-              required
-              v-model="password"
-              class="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
-              placeholder="密码"
-            />
+
+      <h2 class="text-2xl font-bold text-center text-gray-800 mb-8">欢迎回来</h2>
+
+      <form class="space-y-6">
+        <div>
+          <label for="email" class="block text-sm font-medium text-gray-700 mb-1">用户名:</label>
+          <div class="relative">
+            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <i class="fas fa-user text-gray-400"></i>
+            </div>
+            <input id="username" name="username" type="text"
+              class="pl-10 block w-full rounded-lg border-gray-300 bg-white bg-opacity-80 shadow-sm focus:border-primary-500 focus:ring-primary-500 focus:ring-2 h-12"
+              placeholder="your username">
           </div>
         </div>
 
         <div>
-          <button
-            type="submit"
-            class="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-          >
+          <label for="password" class="block text-sm font-medium text-gray-700 mb-1">密码:</label>
+          <div class="relative">
+            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <i class="fas fa-lock text-gray-400"></i>
+            </div>
+            <input id="password" name="password" type="password"
+              class="pl-10 block w-full rounded-lg border-gray-300 bg-white bg-opacity-80 shadow-sm focus:border-primary-500 focus:ring-primary-500 focus:ring-2 h-12"
+              placeholder="••••••••">
+          </div>
+        </div>
+
+        <div class="flex items-center justify-between">
+          <div class="flex items-center">
+            <input id="remember-me" name="remember-me" type="checkbox"
+              class="h-4 w-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500">
+            <label for="remember-me" class="ml-2 block text-sm text-gray-700">记住我</label>
+          </div>
+          <a href="#" class="text-sm font-medium text-primary-600 hover:text-primary-500">忘记密码?</a>
+        </div>
+
+        <div>
+          <button type="submit"
+            class="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-primary hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500">
             登录
           </button>
         </div>
       </form>
+      <p class="mt-6 text-center text-sm text-gray-600">
+        还没有账户?
+        <a href="#" class="font-medium text-primary-600 hover:text-primary-500">注册新账户</a>
+      </p>
     </div>
   </div>
 </template>

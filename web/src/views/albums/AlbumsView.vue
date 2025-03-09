@@ -1,92 +1,188 @@
 <template>
-  <div class="py-8">
-    <div class="container mx-auto px-4">
-      <div class="flex justify-between items-center mb-8">
-        <h1 class="text-2xl font-bold">我的相册</h1>
-        <button class="btn btn-primary" @click="openCreateAlbumModal">
-          创建相册
-        </button>
+  <main class="flex-1 overflow-hidden">
+    <div class="py-6">
+      <!-- 页面标题 -->
+      <div class="px-6 mb-6 flex items-center justify-between">
+        <h2 class="text-xl font-semibold text-primary-600">我的相册</h2>
+        <div class="flex space-x-2">
+          <button
+            class="px-3 py-1.5 bg-white border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500">
+            <i class="fas fa-th-large mr-1"></i> 网格
+          </button>
+          <button
+            class="px-3 py-1.5 bg-white border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500">
+            <i class="fas fa-list mr-1"></i> 列表
+          </button>
+        </div>
       </div>
-      
-      <div v-if="loading" class="flex justify-center items-center min-h-[200px]">
-        <span class="loading loading-spinner loading-lg"></span>
-      </div>
-      <div v-else-if="error" class="alert alert-error">
-        {{ error }}
-      </div>
-      <div v-else-if="albums.length === 0" class="text-center py-12">
-        <div class="text-lg mb-4">暂无相册</div>
-        <button class="btn btn-primary" @click="openCreateAlbumModal">创建第一个相册</button>
-      </div>
-      <div v-else class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-        <div v-for="album in albums" :key="album.id" class="card bg-base-100 shadow-xl">
-          <figure class="relative aspect-square bg-gray-100">
-            <img 
-              v-if="album.cover_photo" 
-              :src="album.cover_photo.url" 
-              :alt="album.name" 
-              class="w-full h-full object-cover" 
-            />
-            <div v-else class="flex items-center justify-center w-full h-full text-gray-400">
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-              </svg>
+
+      <!-- 相册分类 -->
+      <div class="px-6 mb-4">
+        <div class="bg-base-100 rounded-lg shadow-sm p-4 mb-6">
+          <h3 class="text-lg font-medium text-primary-600 mb-4">系统相册</h3>
+          <div class="grid grid-cols-4 gap-4">
+            <!-- 最近添加 -->
+            <div class="relative group overflow-hidden rounded-lg shadow-sm">
+              <div class="aspect-w-16 aspect-h-9 bg-gray-200">
+                <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=1374&auto=format&fit=crop"
+                  alt="最近添加" class="w-full h-40 object-cover">
+                <div class="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-60">
+                </div>
+                <div class="absolute inset-x-0 bottom-0 p-4">
+                  <h4 class="text-white font-medium">最近添加</h4>
+                  <p class="text-gray-200 text-sm">108 张照片</p>
+                </div>
+              </div>
             </div>
-          </figure>
-          <div class="card-body p-4">
-            <h3 class="card-title text-sm">{{ album.name }}</h3>
-            <p class="text-xs text-gray-500">{{ album.photos_count || 0 }}张照片</p>
-            <div class="card-actions justify-end mt-2">
-              <button class="btn btn-sm btn-outline" @click="viewAlbum(album)">
-                查看
-              </button>
+
+            <!-- 收藏 -->
+            <div class="relative group overflow-hidden rounded-lg shadow-sm">
+              <div class="aspect-w-16 aspect-h-9 bg-gray-200">
+                <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=1374&auto=format&fit=crop"
+                  alt="收藏" class="w-full h-40 object-cover">
+                <div class="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-60">
+                </div>
+                <div class="absolute inset-x-0 bottom-0 p-4">
+                  <h4 class="text-white font-medium">收藏</h4>
+                  <p class="text-gray-200 text-sm">24 张照片</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- 人物 -->
+            <div class="relative group overflow-hidden rounded-lg shadow-sm">
+              <div class="aspect-w-16 aspect-h-9 bg-gray-200">
+                <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=1374&auto=format&fit=crop"
+                  alt="人物" class="w-full h-40 object-cover">
+                <div class="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-60">
+                </div>
+                <div class="absolute inset-x-0 bottom-0 p-4">
+                  <h4 class="text-white font-medium">人物</h4>
+                  <p class="text-gray-200 text-sm">56 张照片</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- 地点 -->
+            <div class="relative group overflow-hidden rounded-lg shadow-sm">
+              <div class="aspect-w-16 aspect-h-9 bg-gray-200">
+                <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=1374&auto=format&fit=crop"
+                  alt="地点" class="w-full h-40 object-cover">
+                <div class="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-60">
+                </div>
+                <div class="absolute inset-x-0 bottom-0 p-4">
+                  <h4 class="text-white font-medium">地点</h4>
+                  <p class="text-gray-200 text-sm">12 个地点</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-base-100 rounded-lg shadow-sm p-4">
+          <h3 class="text-lg font-medium text-primary-600 mb-4">自定义相册</h3>
+          <div class="grid grid-cols-4 gap-4">
+            <!-- 旅行 -->
+            <div class="relative group overflow-hidden rounded-lg shadow-sm">
+              <div class="aspect-w-16 aspect-h-9 bg-gray-200">
+                <img src="https://images.unsplash.com/photo-1501555088652-021faa106b9b?q=80&w=1473&auto=format&fit=crop"
+                  alt="旅行" class="w-full h-40 object-cover">
+                <div class="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-60">
+                </div>
+                <div class="absolute inset-x-0 bottom-0 p-4">
+                  <h4 class="text-white font-medium">旅行</h4>
+                  <p class="text-gray-200 text-sm">64 张照片</p>
+                </div>
+              </div>
+              <div
+                class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex space-x-1">
+                <button
+                  class="p-1.5 bg-white bg-opacity-70 backdrop-filter backdrop-blur-sm rounded-full text-gray-700 hover:text-gray-900 focus:outline-none">
+                  <i class="fas fa-ellipsis-h"></i>
+                </button>
+              </div>
+            </div>
+
+            <!-- 家庭 -->
+            <div class="relative group overflow-hidden rounded-lg shadow-sm">
+              <div class="aspect-w-16 aspect-h-9 bg-gray-200">
+                <img src="https://images.unsplash.com/photo-1511895426328-dc8714191300?q=80&w=1470&auto=format&fit=crop"
+                  alt="家庭" class="w-full h-40 object-cover">
+                <div class="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-60">
+                </div>
+                <div class="absolute inset-x-0 bottom-0 p-4">
+                  <h4 class="text-white font-medium">家庭</h4>
+                  <p class="text-gray-200 text-sm">32 张照片</p>
+                </div>
+              </div>
+              <div
+                class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex space-x-1">
+                <button
+                  class="p-1.5 bg-white bg-opacity-70 backdrop-filter backdrop-blur-sm rounded-full text-gray-700 hover:text-gray-900 focus:outline-none">
+                  <i class="fas fa-ellipsis-h"></i>
+                </button>
+              </div>
+            </div>
+
+            <!-- 美食 -->
+            <div class="relative group overflow-hidden rounded-lg shadow-sm">
+              <div class="aspect-w-16 aspect-h-9 bg-gray-200">
+                <img src="https://images.unsplash.com/photo-1504674900247-0877df9cc836?q=80&w=1470&auto=format&fit=crop"
+                  alt="美食" class="w-full h-40 object-cover">
+                <div class="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-60">
+                </div>
+                <div class="absolute inset-x-0 bottom-0 p-4">
+                  <h4 class="text-white font-medium">美食</h4>
+                  <p class="text-gray-200 text-sm">18 张照片</p>
+                </div>
+              </div>
+              <div
+                class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex space-x-1">
+                <button
+                  class="p-1.5 bg-white bg-opacity-70 backdrop-filter backdrop-blur-sm rounded-full text-gray-700 hover:text-gray-900 focus:outline-none">
+                  <i class="fas fa-ellipsis-h"></i>
+                </button>
+              </div>
+            </div>
+
+            <!-- 宠物 -->
+            <div class="relative group overflow-hidden rounded-lg shadow-sm">
+              <div class="aspect-w-16 aspect-h-9 bg-gray-200">
+                <img src="https://images.unsplash.com/photo-1560807707-8cc77767d783?q=80&w=1470&auto=format&fit=crop"
+                  alt="宠物" class="w-full h-40 object-cover">
+                <div class="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-60">
+                </div>
+                <div class="absolute inset-x-0 bottom-0 p-4">
+                  <h4 class="text-white font-medium">宠物</h4>
+                  <p class="text-gray-200 text-sm">27 张照片</p>
+                </div>
+              </div>
+              <div
+                class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex space-x-1">
+                <button
+                  class="p-1.5 bg-white bg-opacity-70 backdrop-filter backdrop-blur-sm rounded-full text-gray-700 hover:text-gray-900 focus:outline-none">
+                  <i class="fas fa-ellipsis-h"></i>
+                </button>
+              </div>
+            </div>
+
+            <!-- 新建相册卡片 -->
+            <div
+              class="border-2 border-dashed border-base-300 rounded-lg flex items-center justify-center h-40 cursor-pointer hover:border-primary-400 transition-colors duration-300">
+              <div class="text-center">
+                <div class="flex justify-center">
+                  <div class="rounded-full bg-primary-100 text-primary-600 p-3">
+                    <i class="fas fa-plus"></i>
+                  </div>
+                </div>
+                <h4 class="mt-2 font-medium text-primary-600">新建相册</h4>
+              </div>
             </div>
           </div>
         </div>
       </div>
     </div>
-
-    <!-- 创建相册模态框 -->
-    <dialog ref="createAlbumDialog" class="modal">
-      <div class="modal-box">
-        <form method="dialog">
-          <button class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2">✕</button>
-        </form>
-        <h3 class="font-bold text-lg mb-4">创建新相册</h3>
-        <form @submit.prevent="createAlbum">
-          <div class="form-control w-full">
-            <label class="label">
-              <span class="label-text">相册名称</span>
-            </label>
-            <input 
-              type="text" 
-              v-model="newAlbum.name" 
-              placeholder="输入相册名称" 
-              class="input input-bordered w-full" 
-              required
-            />
-          </div>
-          <div class="form-control w-full mt-4">
-            <label class="label">
-              <span class="label-text">相册描述</span>
-            </label>
-            <textarea 
-              v-model="newAlbum.description" 
-              placeholder="输入相册描述（可选）" 
-              class="textarea textarea-bordered w-full"
-            ></textarea>
-          </div>
-          <div class="modal-action">
-            <button type="button" class="btn" @click="closeCreateAlbumModal">取消</button>
-            <button type="submit" class="btn btn-primary" :disabled="creating">创建</button>
-          </div>
-        </form>
-      </div>
-      <form method="dialog" class="modal-backdrop">
-        <button>关闭</button>
-      </form>
-    </dialog>
-  </div>
+  </main>
 </template>
 
 <script setup lang="ts">
@@ -189,7 +285,7 @@ const closeCreateAlbumModal = () => {
 
 const createAlbum = async () => {
   if (!newAlbum.value.name) return
-  
+
   creating.value = true
   try {
     // 这里应该调用API创建相册
@@ -202,7 +298,7 @@ const createAlbum = async () => {
       updated_time: new Date().toISOString(),
       photos_count: 0
     }
-    
+
     albums.value.unshift(newAlbumData)
     closeCreateAlbumModal()
   } catch (e) {
@@ -216,5 +312,4 @@ const viewAlbum = (album: Album) => {
   router.push(`/albums/${album.id}`)
 }
 
-onMounted(fetchAlbums)
 </script>
