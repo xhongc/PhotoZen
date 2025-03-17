@@ -29,12 +29,15 @@ User = get_user_model()
 
 @api_controller("/photos", auth=JWTAuth(), permissions=[IsAuthenticated])
 class PhotoController(ControllerBase):
+    model_config = {
+        "arbitrary_types_allowed": True
+    }
+
     @route.get(
         "",
-        response=PaginatedResponseSchema[PhotoSchema],
+        response=list[dict],
         url_name="photos",
     )
-    @paginate(PageNumberPaginationExtra)
     def list(
         self,
         time_filter: Optional[str] = None,
@@ -43,30 +46,32 @@ class PhotoController(ControllerBase):
         tags: Optional[List[str]] = None,
         location: Optional[str] = None,
         favorites_only: bool = False,
-        sort_by: str = "-upload_time",
+        sort_by: str = "-taken_time",
+        group_by: str = "day",
+        page: int = 1,
+        page_size: int = 20
     ):
         # 添加用户收藏状态的子查询
         favorites_subquery = User.objects.filter(
             favorite_photos=OuterRef('pk'),
             id=self.context.request.user.id
         )
-        
+
         queryset = Photo.objects.annotate(
             is_favorite=Exists(favorites_subquery)
         )
 
         # 时间筛选
         if time_filter:
-            now = timezone.now()
-            if time_filter == "30days":
-                queryset = queryset.filter(upload_time__gte=now - timedelta(days=30))
-            elif time_filter == "90days":
-                queryset = queryset.filter(upload_time__gte=now - timedelta(days=90))
-            elif time_filter == "1year":
-                queryset = queryset.filter(upload_time__gte=now - timedelta(days=365))
+            time_filter = datetime.strptime(time_filter, "%Y-%m-%d")
+            start_date = time_filter - timedelta(days=30)
+            end_date = time_filter + timedelta(days=30)
+            queryset = queryset.filter(
+                taken_time__range=[start_date, end_date])
         elif start_date and end_date:
-            queryset = queryset.filter(upload_time__range=[start_date, end_date])
-
+            queryset = queryset.filter(
+                taken_time__range=[start_date, end_date])
+        
         # 标签筛选
         if tags:
             tag_query = Q()
@@ -83,31 +88,51 @@ class PhotoController(ControllerBase):
             queryset = queryset.filter(favorited_by=self.context.request.user)
 
         # 排序
-        if sort_by == "oldest":
-            queryset = queryset.order_by("upload_time")
-        elif sort_by == "newest":
-            queryset = queryset.order_by("-upload_time")
-        elif sort_by == "rating":
-            queryset = queryset.order_by("-rating")
-
-        return queryset
+        queryset = queryset.order_by(sort_by)
+        queryset = queryset[page_size * (page - 1):page_size * page]
+        # 按天分组
+        result = {}
+        if group_by == "day":
+            for photo in queryset:
+                date_key = photo.taken_time.date().isoformat()
+                if date_key not in result:
+                    result[date_key] = []
+                result[date_key].append(photo)
+        elif group_by == "month":
+            for photo in queryset:
+                date_key = photo.taken_time.strftime("%Y-%m")
+                if date_key not in result:
+                    result[date_key] = []
+                result[date_key].append(photo)
+        res = []
+        for key, value in result.items():
+            res.append({
+                "date_key": key,
+                "photos": [PhotoSchema.from_orm(photo).dict() for photo in value]
+            })
+        return res
 
     @route.post(
         "",
         response=PhotoSchema,
         url_name="upload-photo"
     )
-    def upload(self, data: PhotoUploadSchema, file: File):
+    def upload(self, data: PhotoUploadSchema):
+        # 从请求中获取文件
+        file = self.context.request.FILES.get('photo')
+        if not file:
+            raise ValueError("No photo file provided")
+
         # 处理图片文件
         img = Image.open(file)
         width, height = img.size
-        
+
         # 创建缩略图
         thumbnail_size = (300, 300)
         img.thumbnail(thumbnail_size)
         thumb_io = io.BytesIO()
         img.save(thumb_io, format=img.format)
-        
+
         # 创建或获取位置信息
         location = None
         if data.location:
@@ -129,13 +154,13 @@ class PhotoController(ControllerBase):
             height=height,
             format=img.format
         )
-        
+
         # 处理标签
         if data.tags:
             for tag_name in data.tags:
                 tag, _ = Tag.objects.get_or_create(name=tag_name)
                 photo.tags.add(tag)
-        
+
         return photo
 
     @route.put(
@@ -145,7 +170,7 @@ class PhotoController(ControllerBase):
     )
     def update(self, photo_id: int, data: PhotoUpdateSchema):
         photo = self.get_object_or_404(Photo, id=photo_id)
-        
+
         # 更新基本信息
         if data.title is not None:
             photo.title = data.title
@@ -153,7 +178,7 @@ class PhotoController(ControllerBase):
             photo.description = data.description
         if data.taken_time is not None:
             photo.taken_time = data.taken_time
-            
+
         # 更新位置信息
         if data.location:
             location, _ = Location.objects.get_or_create(
@@ -162,14 +187,14 @@ class PhotoController(ControllerBase):
                 defaults={'name': data.location.name}
             )
             photo.location = location
-            
+
         # 更新标签
         if data.tags is not None:
             photo.tags.clear()
             for tag_name in data.tags:
                 tag, _ = Tag.objects.get_or_create(name=tag_name)
                 photo.tags.add(tag)
-                
+
         photo.save()
         return photo
 
@@ -189,7 +214,7 @@ class PhotoController(ControllerBase):
     )
     def rate(self, photo_id: int, data: PhotoRatingSchema):
         photo = self.get_object_or_404(Photo, id=photo_id)
-        
+
         # 创建或更新评分
         rating, created = PhotoRating.objects.get_or_create(
             photo=photo,
@@ -199,12 +224,12 @@ class PhotoController(ControllerBase):
                 'comment': data.comment or ""
             }
         )
-        
+
         if not created:
             rating.rating = data.rating
             rating.comment = data.comment or ""
             rating.save()
-            
+
         # 更新照片的平均评分
         photo.update_rating(data.rating)
         return photo
@@ -217,12 +242,12 @@ class PhotoController(ControllerBase):
     def toggle_favorite(self, photo_id: int):
         photo = self.get_object_or_404(Photo, id=photo_id)
         user = self.context.request.user
-        
+
         if user in photo.favorited_by.all():
             photo.favorited_by.remove(user)
         else:
             photo.favorited_by.add(user)
-            
+
         return photo
 
     @route.get(

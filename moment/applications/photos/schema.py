@@ -3,22 +3,30 @@ from typing import List, Optional
 from ninja import Schema
 from pydantic import Field
 
+
 class TagSchema(Schema):
     id: int
     name: str
+
 
 class LocationSchema(Schema):
     latitude: float
     longitude: float
     name: str
 
+
 class PhotoUploadSchema(Schema):
+    model_config = {
+        "arbitrary_types_allowed": True
+    }
+
     title: str
     description: Optional[str] = None
     taken_time: Optional[datetime] = None
     location: Optional[LocationSchema] = None
     tags: Optional[List[str]] = None
     albums: Optional[List[int]] = None
+
 
 class PhotoUpdateSchema(Schema):
     title: Optional[str] = None
@@ -28,9 +36,11 @@ class PhotoUpdateSchema(Schema):
     tags: Optional[List[str]] = None
     albums: Optional[List[int]] = None
 
+
 class PhotoRatingSchema(Schema):
     rating: float = Field(ge=0, le=5)  # 评分范围0-5
     comment: Optional[str] = None
+
 
 class PhotoSchema(Schema):
     id: int
@@ -48,3 +58,11 @@ class PhotoSchema(Schema):
     rating: Optional[float] = None
     is_favorite: bool = False
     tags: List[TagSchema]
+    
+    @staticmethod
+    def resolve_file_path(obj) -> str:
+        return f"http://127.0.0.1:8000/media/{obj.file_path}"
+
+    @staticmethod
+    def resolve_thumbnail_path(obj) -> str:
+        return f"http://127.0.0.1:8000/media/{obj.thumbnail_path}"

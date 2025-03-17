@@ -46,7 +46,7 @@ export default {
               ...require("daisyui/src/theming/themes")["light"],
               "base-200": "#f8fafc",
           },
-      },
+        },
         {
             'dark': {
                 ...require("daisyui/src/theming/themes")["dark"],
