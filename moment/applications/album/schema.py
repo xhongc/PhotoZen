@@ -22,4 +22,7 @@ class AlbumSchema(AlbumBaseSchema):
     created_time: datetime
     updated_time: datetime
     photos_count: int
-    cover_photo: Optional[AlbumPhotoSchema] = None 
+    cover_photo: Optional[AlbumPhotoSchema] = None
+
+class BulkAddPhotosSchema(Schema):
+    photo_ids: List[int] 

@@ -50,6 +50,11 @@ export const albumApi = {
     return api.post(`/photos/${photoId}/albums/${albumId}`)
   },
 
+  // 批量添加照片到相册
+  bulkAddPhotosToAlbum(albumId: number, photoIds: number[]): Promise<Album> {
+    return api.post(`/albums/${albumId}/photos/bulk`, { photo_ids: photoIds }).then(response => response.data)
+  },
+
   // 从相册中移除照片
   removePhotoFromAlbum(albumId: number, photoId: number): Promise<void> {
     return api.delete(`/photos/${photoId}/albums/${albumId}`)

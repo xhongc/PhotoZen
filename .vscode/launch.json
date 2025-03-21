@@ -17,6 +17,15 @@
             "autoStartBrowser": false,
             "program": "${workspaceFolder}/moment/manage.py",
             "justMyCode": false
+        },
+        {
+            "name": "Django Shell Plus",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/moment/manage.py",
+            "args": [
+                "shell_plus",
+            ]
         }
     ]
 }

@@ -57,10 +57,29 @@ export interface PhotoRatingParams {
   comment?: string
 }
 
+export interface PhotoUpdateParams {
+  title?: string
+  description?: string
+  taken_time?: string
+  tags?: string[]
+  location?: string
+  is_favorite?: boolean
+}
+
 export const photoApi = {
   // 获取照片列表
   getPhotos(params?: PhotoListParams): Promise<PhotoGroup[]> {
     return api.get('/photos', { params }).then(response => response.data)
+  },
+
+  // 获取单个照片
+  getPhoto(id: number): Promise<Photo> {
+    return api.get(`/photos/${id}`).then(response => response.data)
+  },
+
+  // 更新照片
+  updatePhoto(id: number, data: PhotoUpdateParams): Promise<Photo> {
+    return api.put(`/photos/${id}`, data).then(response => response.data)
   },
 
   // 上传照片
@@ -94,5 +113,10 @@ export const photoApi = {
   // 评分照片
   ratePhoto(id: number, data: PhotoRatingParams): Promise<Photo> {
     return api.post(`/photos/${id}/rate`, data).then(response => response.data)
+  },
+
+  // 获取照片文件
+  getPhotoFile(id: number): Promise<Blob> {
+    return api.get(`/photos/${id}/file`, { responseType: 'blob' }).then(response => response.data)
   }
 }

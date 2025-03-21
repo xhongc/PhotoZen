@@ -74,7 +74,7 @@
     <div class="flex">
       <!-- 照片墙 -->
       <div class="flex-1 px-4 sm:px-6 lg:px-8 py-8">
-        <div class="max-w-7xl mx-auto">
+        <div class="max-w-full mx-auto">
           <template v-if="loading">
             <div class="flex justify-center items-center h-64">
               <i class="fas fa-spinner fa-spin text-4xl text-primary-500"></i>
@@ -116,19 +116,19 @@
                       :value="photo.id"
                       class="w-5 h-5 text-primary-600 rounded border-gray-300 focus:ring-primary-500 checkbox">
                   </div>
-                  <div class="aspect-w-1 aspect-h-1 bg-gray-200 rounded-lg overflow-hidden cursor-pointer"
+                  <div class="w-full md:h-[180px] 2xl:h-[300px] h-[180px] bg-gray-200 rounded-lg overflow-hidden cursor-pointer"
                     @click="isSelectMode && togglePhotoSelection(photo.id)">
                     <img :src="photo.thumbnail_path" :alt="photo.title"
                       :class="[isSelectMode && selectedPhotos.includes(photo.id) ? 'opacity-75' : 'opacity-100', 'w-full h-full object-cover group-hover:opacity-75 transition-opacity']">
                     <div
                       v-if="!isSelectMode"
-                      class="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-opacity flex items-center justify-center opacity-0 group-hover:opacity-100">
+                      class="absolute inset-0 bg-black bg-opacity-0 transition-opacity flex items-center justify-center opacity-0 group-hover:opacity-100">
                       <div class="flex space-x-2">
                         <button
                           :class="['p-2 rounded-full', photo.is_favorite ? 'bg-primary-500 text-white' : 'bg-white text-gray-700 hover:text-gray-900']">
                           <i class="fas fa-heart"></i>
                         </button>
-                        <button class="p-2 bg-white rounded-full text-gray-700 hover:text-gray-900">
+                        <button @click.stop="handleEditPhoto(photo.id)" class="p-2 bg-white rounded-full text-gray-700 hover:text-gray-900">
                           <i class="fas fa-edit"></i>
                         </button>
                         <button class="p-2 bg-white rounded-full text-gray-700 hover:text-gray-900">
@@ -163,7 +163,7 @@
                           :class="['p-2 rounded-full', photo.is_favorite ? 'bg-primary-500 text-white' : 'bg-white text-gray-700 hover:text-gray-900']">
                           <i class="fas fa-heart"></i>
                         </button>
-                        <button class="p-2 bg-white rounded-full text-gray-700 hover:text-gray-900">
+                        <button @click.stop="handleEditPhoto(photo.id)" class="p-2 bg-white rounded-full text-gray-700 hover:text-gray-900">
                           <i class="fas fa-edit"></i>
                         </button>
                         <button class="p-2 bg-white rounded-full text-gray-700 hover:text-gray-900">
@@ -203,7 +203,7 @@
                       :class="['p-2 rounded-full', photo.is_favorite ? 'bg-primary-500 text-white' : 'bg-gray-100 text-gray-700 hover:text-gray-900']">
                       <i class="fas fa-heart"></i>
                     </button>
-                    <button class="p-2 bg-gray-100 rounded-full text-gray-700 hover:text-gray-900">
+                    <button @click.stop="handleEditPhoto(photo.id)" class="p-2 bg-gray-100 rounded-full text-gray-700 hover:text-gray-900">
                       <i class="fas fa-edit"></i>
                     </button>
                     <button class="p-2 bg-gray-100 rounded-full text-gray-700 hover:text-gray-900">
@@ -239,7 +239,10 @@
 import { ref, onMounted, computed, watch, onUnmounted } from 'vue'
 import PhotoGrid from '@/components/PhotoGrid.vue'
 import { photoApi, type Photo, type PhotoListParams, type PhotoGroup } from '@/api/photos'
+import { albumApi } from '@/api/albums'
+import { useRouter } from 'vue-router'
 
+const router = useRouter()
 const photos = ref<PhotoGroup[]>([])
 const loading = ref(true)
 const error = ref('')
@@ -476,6 +479,7 @@ const batchAddToFavorites = async () => {
 const batchAddToAlbum = async () => {
   // TODO: 实现添加到相册的功能
   console.log('添加到相册:', selectedPhotos.value)
+  await albumApi.bulkAddPhotosToAlbum(albumId, selectedPhotos.value)
 }
 
 const batchDelete = async () => {
@@ -568,6 +572,11 @@ const handleMouseUp = () => {
   isMouseDown.value = false
   isSelecting.value = false
 }
+
+// 处理编辑照片
+const handleEditPhoto = (photoId: number) => {
+  router.push(`/photos/${photoId}/edit`)
+}
 </script>
 
 <style scoped>
@@ -587,11 +596,6 @@ const handleMouseUp = () => {
   -ms-user-select: none;
 }
 
-/* 只允许照片项接收鼠标事件 */
-.photo-item {
-  pointer-events: auto;
-}
-
 /* 照片项内的所有元素都禁用鼠标事件 */
 .photo-item * {
   pointer-events: none;
@@ -609,6 +613,16 @@ button {
 
 /* 允许输入框接收鼠标事件 */
 input {
+  pointer-events: auto;
+}
+
+/* 允许操作按钮区域接收鼠标事件 */
+.photo-item .flex.space-x-2 {
+  pointer-events: auto;
+}
+
+/* 允许操作按钮区域内的所有元素接收鼠标事件 */
+.photo-item .flex.space-x-2 * {
   pointer-events: auto;
 }
 </style>

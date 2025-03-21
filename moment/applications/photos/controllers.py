@@ -1,3 +1,4 @@
+from django.conf import settings
 from applications.photos.schema import (
     PhotoSchema, PhotoUploadSchema, PhotoUpdateSchema,
     PhotoRatingSchema, LocationSchema
@@ -18,6 +19,7 @@ from typing import Optional, List
 from django.db.models import Q, Exists, OuterRef
 from django.shortcuts import get_object_or_404
 from django.core.files import File
+from django.http import FileResponse
 from PIL import Image
 import io
 import os
@@ -169,7 +171,7 @@ class PhotoController(ControllerBase):
         url_name="update-photo"
     )
     def update(self, photo_id: int, data: PhotoUpdateSchema):
-        photo = self.get_object_or_404(Photo, id=photo_id)
+        photo = get_object_or_404(Photo, id=photo_id)
 
         # 更新基本信息
         if data.title is not None:
@@ -203,7 +205,7 @@ class PhotoController(ControllerBase):
         url_name="delete-photo"
     )
     def delete(self, photo_id: int):
-        photo = self.get_object_or_404(Photo, id=photo_id)
+        photo = get_object_or_404(Photo, id=photo_id)
         photo.delete()
         return {"success": True}
 
@@ -213,7 +215,7 @@ class PhotoController(ControllerBase):
         url_name="rate-photo"
     )
     def rate(self, photo_id: int, data: PhotoRatingSchema):
-        photo = self.get_object_or_404(Photo, id=photo_id)
+        photo = get_object_or_404(Photo, id=photo_id)
 
         # 创建或更新评分
         rating, created = PhotoRating.objects.get_or_create(
@@ -240,7 +242,7 @@ class PhotoController(ControllerBase):
         url_name="favorite-photo"
     )
     def toggle_favorite(self, photo_id: int):
-        photo = self.get_object_or_404(Photo, id=photo_id)
+        photo = get_object_or_404(Photo, id=photo_id)
         user = self.context.request.user
 
         if user in photo.favorited_by.all():
@@ -256,7 +258,7 @@ class PhotoController(ControllerBase):
         url_name="photo-detail"
     )
     def get_photo(self, photo_id: int):
-        photo = self.get_object_or_404(Photo, id=photo_id)
+        photo = get_object_or_404(Photo, id=photo_id)
         return photo
 
     @route.get(
@@ -266,3 +268,29 @@ class PhotoController(ControllerBase):
     )
     def get_tags(self):
         return Tag.objects.values_list("name", flat=True)
+
+    @route.get(
+        "/{photo_id}/file",
+        url_name="photo-file"
+    )
+    def get_photo_file(self, photo_id: int):
+        photo = get_object_or_404(Photo, id=photo_id)
+        
+        # 检查文件是否存在
+        if not photo.file_path:
+            raise ValueError("照片文件未找到")
+        real_path = photo.file_path.path.replace(str(settings.MEDIA_ROOT), settings.PHOTO_FOLDER_PREFIX)
+
+        # 打开文件并读取为二进制流
+        with open(real_path, 'rb') as f:
+            file_data = f.read()
+            
+        # 创建内存中的文件流
+        file_stream = io.BytesIO(file_data)
+        
+        # 返回文件流响应
+        return FileResponse(
+            file_stream,
+            content_type=f"image/{photo.format.lower()}",
+            filename=os.path.basename(real_path)
+        )

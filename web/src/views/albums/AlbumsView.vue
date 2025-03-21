@@ -2,18 +2,8 @@
   <main class="flex-1 overflow-hidden">
     <div class="py-6">
       <!-- 页面标题 -->
-      <div class="px-6 mb-6 flex items-center justify-between">
+      <div class="px-6 mb-6 flex items-center justify-between ml-2">
         <h2 class="text-xl font-semibold text-primary-600">我的相册</h2>
-        <div class="flex space-x-2">
-          <button
-            class="px-3 py-1.5 bg-white border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500">
-            <i class="fas fa-th-large mr-1"></i> 网格
-          </button>
-          <button
-            class="px-3 py-1.5 bg-white border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500">
-            <i class="fas fa-list mr-1"></i> 列表
-          </button>
-        </div>
       </div>
 
       <!-- 相册分类 -->
@@ -25,7 +15,7 @@
             <div class="relative group overflow-hidden rounded-lg shadow-sm">
               <div class="aspect-w-16 aspect-h-9 bg-gray-200">
                 <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=1374&auto=format&fit=crop"
-                  alt="最近添加" class="w-full h-40 object-cover">
+                  alt="最近添加" class="w-full h-40 2xl:h-60 object-cover">
                 <div class="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-60">
                 </div>
                 <div class="absolute inset-x-0 bottom-0 p-4">
@@ -39,7 +29,7 @@
             <div class="relative group overflow-hidden rounded-lg shadow-sm">
               <div class="aspect-w-16 aspect-h-9 bg-gray-200">
                 <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=1374&auto=format&fit=crop"
-                  alt="收藏" class="w-full h-40 object-cover">
+                  alt="收藏" class="w-full h-40 2xl:h-60 object-cover">
                 <div class="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-60">
                 </div>
                 <div class="absolute inset-x-0 bottom-0 p-4">
@@ -53,7 +43,7 @@
             <div class="relative group overflow-hidden rounded-lg shadow-sm">
               <div class="aspect-w-16 aspect-h-9 bg-gray-200">
                 <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=1374&auto=format&fit=crop"
-                  alt="人物" class="w-full h-40 object-cover">
+                  alt="人物" class="w-full h-40 2xl:h-60 object-cover">
                 <div class="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-60">
                 </div>
                 <div class="absolute inset-x-0 bottom-0 p-4">
@@ -67,7 +57,7 @@
             <div class="relative group overflow-hidden rounded-lg shadow-sm">
               <div class="aspect-w-16 aspect-h-9 bg-gray-200">
                 <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=1374&auto=format&fit=crop"
-                  alt="地点" class="w-full h-40 object-cover">
+                  alt="地点" class="w-full h-40 2xl:h-60 object-cover">
                 <div class="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-60">
                 </div>
                 <div class="absolute inset-x-0 bottom-0 p-4">
@@ -86,7 +76,7 @@
             <div class="relative group overflow-hidden rounded-lg shadow-sm">
               <div class="aspect-w-16 aspect-h-9 bg-gray-200">
                 <img src="https://images.unsplash.com/photo-1501555088652-021faa106b9b?q=80&w=1473&auto=format&fit=crop"
-                  alt="旅行" class="w-full h-40 object-cover">
+                  alt="旅行" class="w-full h-40 2xl:h-60 object-cover">
                 <div class="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-60">
                 </div>
                 <div class="absolute inset-x-0 bottom-0 p-4">
@@ -107,7 +97,7 @@
             <div class="relative group overflow-hidden rounded-lg shadow-sm">
               <div class="aspect-w-16 aspect-h-9 bg-gray-200">
                 <img src="https://images.unsplash.com/photo-1511895426328-dc8714191300?q=80&w=1470&auto=format&fit=crop"
-                  alt="家庭" class="w-full h-40 object-cover">
+                  alt="家庭" class="w-full h-40 2xl:h-60 object-cover">
                 <div class="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-60">
                 </div>
                 <div class="absolute inset-x-0 bottom-0 p-4">
@@ -128,7 +118,7 @@
             <div class="relative group overflow-hidden rounded-lg shadow-sm">
               <div class="aspect-w-16 aspect-h-9 bg-gray-200">
                 <img src="https://images.unsplash.com/photo-1504674900247-0877df9cc836?q=80&w=1470&auto=format&fit=crop"
-                  alt="美食" class="w-full h-40 object-cover">
+                  alt="美食" class="w-full h-40 2xl:h-60 object-cover">
                 <div class="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-60">
                 </div>
                 <div class="absolute inset-x-0 bottom-0 p-4">
@@ -149,7 +139,7 @@
             <div class="relative group overflow-hidden rounded-lg shadow-sm">
               <div class="aspect-w-16 aspect-h-9 bg-gray-200">
                 <img src="https://images.unsplash.com/photo-1560807707-8cc77767d783?q=80&w=1470&auto=format&fit=crop"
-                  alt="宠物" class="w-full h-40 object-cover">
+                  alt="宠物" class="w-full h-40 2xl:h-60 object-cover">
                 <div class="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-60">
                 </div>
                 <div class="absolute inset-x-0 bottom-0 p-4">

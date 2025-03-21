@@ -21,6 +21,11 @@ const router = createRouter({
       component: () => import('../views/photos/PhotosView.vue'),
     },
     {
+      path: '/photos/:id/edit',
+      name: 'photo-edit',
+      component: () => import('../views/photos/PhotoEditView.vue'),
+    },
+    {
       path: '/upload',
       name: 'upload',
       component: () => import('../views/photos/UploadView.vue'),

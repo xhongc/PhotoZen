@@ -14,9 +14,37 @@ SECRET_KEY = 'django-insecure-4y43m!f5xn8hy574a+(zo!0b95(*s&*t8*nugv=2&!(kf7&x-o
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['127.0.0.1', 'localhost']
+CORS_ALLOWED_ORIGINS = [
+    "http://127.0.0.1:5173",  # Vue 开发服务器
+    "http://localhost:5173",
+]
 
+# 允许所有请求头
+CORS_ALLOW_HEADERS = [
+    'accept',
+    'accept-encoding',
+    'authorization',
+    'content-type',
+    'dnt',
+    'origin',
+    'user-agent',
+    'x-csrftoken',
+    'x-requested-with',
+]
 
+# 允许所有方法
+CORS_ALLOW_METHODS = [
+    'DELETE',
+    'GET',
+    'OPTIONS',
+    'PATCH',
+    'POST',
+    'PUT',
+]
+
+# 允许暴露的响应头
+CORS_EXPOSE_HEADERS = ['Content-Type', 'X-CSRFToken']
 # Application definition
 
 INSTALLED_APPS = [
@@ -29,10 +57,12 @@ INSTALLED_APPS = [
     'applications.photos',  
     'applications.users', 
     'ninja_jwt',
-    'ninja_extra'
+    'ninja_extra',
+    'corsheaders',
 ]
 
 MIDDLEWARE = [
+    "corsheaders.middleware.CorsMiddleware",
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -130,7 +160,6 @@ NINJA_JWT = {
     "SLIDING_TOKEN_LIFETIME": timedelta(days=5),
     "SLIDING_TOKEN_REFRESH_LIFETIME": timedelta(days=1),
 }
-
 try:
     from local_settings import *  # noqa
 except ImportError:

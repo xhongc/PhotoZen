@@ -77,4 +77,7 @@ nav a:first-of-type {
 .h-screen-header {
   height: calc(100vh - 70px);
 }
+.h-screen-2header {
+  height: calc(100vh - 150px);
+}
 </style>
