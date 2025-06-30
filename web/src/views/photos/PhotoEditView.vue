@@ -145,6 +145,15 @@ import { ref, onMounted, watch, onUnmounted, getCurrentInstance } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { photoApi, type Photo } from '@/api/photos'
 import notify from '@/components/notify'
+import type { WebDAVFile } from '@/api/webdav'
+
+const props = defineProps<{
+  photo: WebDAVFile | null
+}>()
+
+const emit = defineEmits<{
+  (e: 'close'): void
+}>()
 
 const route = useRoute()
 const router = useRouter()
@@ -237,7 +246,7 @@ const savePhoto = async () => {
   try {
     if (!photo.value) return
     await photoApi.updatePhoto(photo.value.id, form.value)
-    router.back()
+    emit('close')
   } catch (e) {
     error.value = e instanceof Error ? e.message : '保存照片失败'
   }

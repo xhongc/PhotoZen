@@ -51,7 +51,8 @@ class PhotoController(ControllerBase):
         sort_by: str = "-taken_time",
         group_by: str = "day",
         page: int = 1,
-        page_size: int = 20
+        page_size: int = 20,
+        album_id: Optional[int] = None
     ):
         # 添加用户收藏状态的子查询
         favorites_subquery = User.objects.filter(
@@ -88,7 +89,8 @@ class PhotoController(ControllerBase):
         # 收藏筛选
         if favorites_only:
             queryset = queryset.filter(favorited_by=self.context.request.user)
-
+        if album_id:
+            queryset = queryset.filter(albums=album_id)
         # 排序
         queryset = queryset.order_by(sort_by)
         queryset = queryset[page_size * (page - 1):page_size * page]
@@ -106,6 +108,14 @@ class PhotoController(ControllerBase):
                 if date_key not in result:
                     result[date_key] = []
                 result[date_key].append(photo)
+        elif group_by == "item":
+            return [
+                {
+                    "date_key": "item",
+                    "photos": [PhotoSchema.from_orm(photo).dict() for photo in queryset]
+                }
+            ]
+
         res = []
         for key, value in result.items():
             res.append({

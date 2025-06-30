@@ -1,5 +1,6 @@
 from pathlib import Path
 from datetime import timedelta
+import os
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -12,7 +13,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-4y43m!f5xn8hy574a+(zo!0b95(*s&*t8*nugv=2&!(kf7&x-o'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
 
 ALLOWED_HOSTS = ['127.0.0.1', 'localhost']
 CORS_ALLOWED_ORIGINS = [
@@ -55,14 +56,18 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'applications.photos',  
+    'applications.album',  
     'applications.users', 
+    'applications.home', 
+    'applications.webdav', 
+    'applications.file', 
     'ninja_jwt',
     'ninja_extra',
-    'corsheaders',
 ]
+if DEBUG:
+    INSTALLED_APPS.append('corsheaders')
 
 MIDDLEWARE = [
-    "corsheaders.middleware.CorsMiddleware",
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -73,12 +78,15 @@ MIDDLEWARE = [
     'django.middleware.gzip.GZipMiddleware',
 ]
 
+if DEBUG:
+    MIDDLEWARE.insert(0, "corsheaders.middleware.CorsMiddleware")
+
 ROOT_URLCONF = 'moment.urls'
 
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [os.path.join(BASE_DIR, 'templates')],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -149,11 +157,18 @@ MEDIA_ROOT = BASE_DIR / 'media'
 CORS_ALLOW_ALL_ORIGINS = True  # Only for development
 CORS_ALLOW_CREDENTIALS = True
 
+# CSRF settings
+CSRF_COOKIE_SECURE = False  # 开发环境设置为 False
+CSRF_COOKIE_HTTPONLY = False  # 允许 JavaScript 访问 CSRF cookie
+CSRF_TRUSTED_ORIGINS = ['http://127.0.0.1:5173', 'http://localhost:5173']  # 允许的源
+CSRF_USE_SESSIONS = True  # 使用会话存储 CSRF token
+
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
+RECYCLE_PATH = os.path.join(BASE_DIR, 'recycle')
 
 NINJA_JWT = {
     "AUTH_TOKEN_CLASSES": ("ninja_jwt.tokens.SlidingToken",),

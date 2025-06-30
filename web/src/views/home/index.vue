@@ -11,8 +11,8 @@
                         </div>
                         <div class="ml-5 w-0 flex-1">
                             <dl>
-                                <dt class="text-sm font-medium text-gray-500 truncate">总照片数</dt>
-                                <dd class="text-lg font-semibold text-primary-600">12,361</dd>
+                                <div class="text-sm font-medium text-gray-500 truncate">总照片数</div>
+                                <div class="text-lg font-semibold text-primary-600">{{ homeData?.total_photos }}</div>
                             </dl>
                         </div>
                     </div>
@@ -26,8 +26,8 @@
                         </div>
                         <div class="ml-5 w-0 flex-1">
                             <dl>
-                                <dt class="text-sm font-medium text-gray-500 truncate">相册数</dt>
-                                <dd class="text-lg font-semibold text-primary-600">56</dd>
+                                <div class="text-sm font-medium text-gray-500 truncate">相册数</div>
+                                <div class="text-lg font-semibold text-primary-600">{{ homeData?.total_albums }}</div>
                             </dl>
                         </div>
                     </div>
@@ -41,8 +41,8 @@
                         </div>
                         <div class="ml-5 w-0 flex-1">
                             <dl>
-                                <dt class="text-sm font-medium text-gray-500 truncate">收藏数</dt>
-                                <dd class="text-lg font-semibold text-primary-600">284</dd>
+                                <div class="text-sm font-medium text-gray-500 truncate">收藏数</div>
+                                <div class="text-lg font-semibold text-primary-600">{{ homeData?.total_favorites }}</div>
                             </dl>
                         </div>
                     </div>
@@ -56,8 +56,8 @@
                         </div>
                         <div class="ml-5 w-0 flex-1">
                             <dl>
-                                <dt class="text-sm font-medium text-gray-500 truncate">存储空间</dt>
-                                <dd class="text-lg font-semibold text-primary-600">45.8 GB</dd>
+                                <div class="text-sm font-medium text-gray-500 truncate">存储空间</div>
+                                <div class="text-lg font-semibold text-primary-600">{{ homeData?.storage_space }}</div>
                             </dl>
                         </div>
                     </div>
@@ -76,18 +76,13 @@
             </div>
             <div class="px-4 py-5 sm:p-6">
                 <div class="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
-                    <!-- 示例照片项 -->
-                    <div class="group relative">
-                        <div class="aspect-w-1 aspect-h-1 rounded-lg overflow-hidden">
-                            <img src="https://images.unsplash.com/photo-1682687220742-aba13b6e50ba" alt=""
-                                class="object-cover">
-                            <div
-                                class="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-opacity">
-                            </div>
+                    <div class="group relative" v-for="photo in recentPhotos" :key="photo.id">
+                        <div class="aspect-w-1 aspect-h-1 rounded-lg overflow-hidden w-full md:h-[160px] 2xl:h-[260px] h-[160px]">
+                            <img :src="photo.thumbnail_path" alt=""
+                                class="object-cover w-full h-full group-hover:scale-105 transition-all duration-300 cursor-pointer">
                         </div>
-                        <p class="mt-2 text-sm text-gray-500">2024-03-20</p>
+                        <p class="mt-2 text-sm text-gray-500">{{ photo.taken_time }}</p>
                     </div>
-                    <!-- 更多照片项... -->
                 </div>
             </div>
         </div>
@@ -139,6 +134,40 @@
         </div>
     </main>
 </template>
+
+<script setup lang="ts">
+import { ref, onMounted } from 'vue'
+import { homeApi, type HomeData } from '@/api/home'
+import { photoApi, type Photo } from '@/api/photos'
+const homeData = ref<HomeData>()
+const recentPhotos = ref<Photo[]>([])
+onMounted(async () => {
+    await fetchHomeData()
+    await fetchRecentPhotos()
+})
+const fetchHomeData = async () => {
+    try {
+        const response = await homeApi.getHome()
+        homeData.value = response
+    } catch (error) {
+        console.error('获取首页数据失败:', error)
+    }
+}
+const fetchRecentPhotos = async () => {
+    try {
+        const response = await photoApi.getPhotos(
+            {
+                group_by: 'item',
+                'sort_by': '-taken_time',
+                page_size: 5
+            }
+        )
+        recentPhotos.value = response[0].photos
+    } catch (error) {
+        console.error('获取最近照片失败:', error)
+    }
+}
+</script>
 
 <style>
 @media (min-width: 1024px) {

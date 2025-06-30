@@ -1,6 +1,6 @@
 <template>
     <transition name="slide-fade">
-        <div v-if="isVisible" class="notify-container">
+        <div v-if="isVisible">
             <div role="alert" class="alert shadow-lg notify" :class="type">
                 <div class="flex items-center flex-1">
                     <!-- 图标 -->
@@ -20,7 +20,7 @@
                     <!-- 内容 -->
                     <div class="flex-1">
                         <h3 class="font-bold text-base">{{title}}</h3>
-                        <div class="text-sm mt-1">{{content}}</div>
+                        <div class="text-sm mt-1 text-gray-500">{{content}}</div>
                     </div>
                 </div>
                 <!-- 操作按钮 -->
@@ -96,7 +96,7 @@ const handleRedirct = (url: string) => {
 }
 .my-notify{
     margin: 15px;
-    width: 350px;
+    width: 450px;
 }
 
 .notify {
@@ -114,7 +114,7 @@ const handleRedirct = (url: string) => {
     font-weight: 600;
 }
 .notify .content{
-    width: 320px;
+    width: 420px;
     height: 30px;
     font-size: 15px;
 }

@@ -38,11 +38,11 @@
                         <i class="fas fa-sync-alt mr-3" :class="[$route.path === '/settings/sync' ? 'text-primary-500' : 'text-gray-400 group-hover:text-gray-500']"></i>
                         <span>同步设置</span>
                     </router-link>
-                    <router-link to="/settings/appearance"
+                    <router-link to="/settings/recycle"
                         class="group flex items-center px-3 py-2 text-sm font-medium rounded-md"
-                        :class="[$route.path === '/settings/appearance' ? 'bg-primary-50 text-primary-700' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900']">
-                        <i class="fas fa-palette mr-3" :class="[$route.path === '/settings/appearance' ? 'text-primary-500' : 'text-gray-400 group-hover:text-gray-500']"></i>
-                        <span>外观设置</span>
+                        :class="[$route.path === '/settings/recycle' ? 'bg-primary-50 text-primary-700' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900']">
+                        <i class="fas fa-trash mr-3" :class="[$route.path === '/settings/recycle' ? 'text-primary-500' : 'text-gray-400 group-hover:text-gray-500']"></i>
+                        <span>回收站</span>
                     </router-link>
                     <router-link to="/settings/sharing"
                         class="group flex items-center px-3 py-2 text-sm font-medium rounded-md"

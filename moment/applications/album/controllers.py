@@ -30,7 +30,7 @@ class AlbumController(ControllerBase):
     @paginate(PageNumberPaginationExtra)
     def list(self):
         """获取当前用户的所有相册列表"""
-        return Album.objects.filter(owner=self.context.request.user)
+        return Album.objects.filter()
 
     @route.post(
         "",
@@ -53,7 +53,7 @@ class AlbumController(ControllerBase):
     )
     def get_album(self, album_id: int):
         """获取相册详情"""
-        return self.get_object_or_404(
+        return get_object_or_404(
             Album,
             id=album_id,
             owner=self.context.request.user
@@ -66,7 +66,7 @@ class AlbumController(ControllerBase):
     )
     def update(self, album_id: int, data: AlbumUpdateSchema):
         """更新相册信息"""
-        album = self.get_object_or_404(
+        album = get_object_or_404(
             Album,
             id=album_id,
             owner=self.context.request.user
@@ -76,7 +76,7 @@ class AlbumController(ControllerBase):
         album.description = data.description or ""
         
         if data.cover_photo_id:
-            cover_photo = self.get_object_or_404(
+            cover_photo = get_object_or_404(
                 Photo,
                 id=data.cover_photo_id,
                 albums=album
@@ -92,7 +92,7 @@ class AlbumController(ControllerBase):
     )
     def delete(self, album_id: int):
         """删除相册"""
-        album = self.get_object_or_404(
+        album = get_object_or_404(
             Album,
             id=album_id,
             owner=self.context.request.user
@@ -101,63 +101,15 @@ class AlbumController(ControllerBase):
         return {"success": True}
 
     @route.post(
-        "/{album_id}/photos/{photo_id}",
-        response=AlbumSchema,
-        url_name="add-photo-to-album"
-    )
-    def add_photo(self, album_id: int, photo_id: int):
-        """添加照片到相册"""
-        album = self.get_object_or_404(
-            Album,
-            id=album_id,
-            owner=self.context.request.user
-        )
-        photo = self.get_object_or_404(Photo, id=photo_id)
-        
-        album.photos.add(photo)
-        
-        # 如果相册没有封面，将此照片设为封面
-        if not album.cover_photo:
-            album.cover_photo = photo
-            album.save()
-            
-        return album
-
-    @route.delete(
-        "/{album_id}/photos/{photo_id}",
-        response=AlbumSchema,
-        url_name="remove-photo-from-album"
-    )
-    def remove_photo(self, album_id: int, photo_id: int):
-        """从相册中移除照片"""
-        album = self.get_object_or_404(
-            Album,
-            id=album_id,
-            owner=self.context.request.user
-        )
-        photo = self.get_object_or_404(Photo, id=photo_id)
-        
-        album.photos.remove(photo)
-        
-        # 如果移除的是封面照片，更新封面
-        if album.cover_photo == photo:
-            new_cover = album.photos.first()
-            album.cover_photo = new_cover
-            album.save()
-            
-        return album
-
-    @route.post(
         "/{album_id}/photos/bulk",
         response=AlbumSchema,
         url_name="bulk-add-photos-to-album"
     )
     def bulk_add_photos(self, album_id: int, data: BulkAddPhotosSchema):
         """批量添加照片到相册"""
-        album = self.get_object_or_404(
+        album = get_object_or_404(
             Album,
             id=album_id,
-            owner=self.context.request.user
         )
         
         # 获取所有照片
@@ -171,4 +123,55 @@ class AlbumController(ControllerBase):
             album.cover_photo = photos.first()
             album.save()
             
-        return album 
+        return album
+
+    @route.delete(
+        "/{album_id}/photos/{photo_id}",
+        response=AlbumSchema,
+        url_name="remove-photo-from-album"
+    )
+    def remove_photo(self, album_id: int, photo_id: int):
+        """从相册中移除照片"""
+        album = get_object_or_404(
+            Album,
+            id=album_id,
+            owner=self.context.request.user
+        )
+        photo = get_object_or_404(Photo, id=photo_id)
+        
+        album.photos.remove(photo)
+        
+        # 如果移除的是封面照片，更新封面
+        if album.cover_photo == photo:
+            new_cover = album.photos.first()
+            album.cover_photo = new_cover
+            album.save()
+            
+        return album
+
+@api_controller("/favorite", auth=JWTAuth(), permissions=[IsAuthenticated])
+class FavoriteController(ControllerBase):
+    @route.post(
+        "/photos/bulk",
+        response=dict,
+        url_name="bulk-add-photos-to-favorite"
+    )
+    def bulk_add_favorite(self, data: BulkAddPhotosSchema):
+        """批量添加照片到收藏相册"""
+        album = get_object_or_404(
+            Album,
+            name="收藏"
+        )
+        
+        # 获取所有照片
+        photos = Photo.objects.filter(id__in=data.photo_ids)
+        
+        # 批量添加照片
+        album.photos.add(*photos)
+        
+        # 如果相册没有封面，将第一张照片设为封面
+        if not album.cover_photo and photos.exists():
+            album.cover_photo = photos.first()
+        album.save()
+            
+        return {"success": True} 

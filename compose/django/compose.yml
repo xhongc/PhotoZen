@@ -1,0 +1,9 @@
+version: '3'
+
+services:
+  photozen:
+    image: photozen:latest-arm64
+    container_name: photozen
+    ports:
+      - "8008:8008"
+    restart: unless-stopped

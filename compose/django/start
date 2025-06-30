@@ -1,0 +1,8 @@
+#!/bin/bash
+
+set -o errexit
+set -o pipefail
+set -o nounset
+
+python /app/moment/manage.py migrate
+cd /app/moment && gunicorn -w 1 -b 0.0.0.0:8008 moment.wsgi:application --timeout 120 --worker-class=gevent

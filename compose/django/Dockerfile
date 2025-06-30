@@ -1,0 +1,76 @@
+FROM registry.cn-hangzhou.aliyuncs.com/xhongc/linux_amd64_python:3.9.12-slim-bullseye AS python
+
+# Python build stage
+FROM python AS python-build-stage
+ARG APP_HOME=/app
+ARG BUILD_ENVIRONMENT=prod
+
+# Install apt packages for building
+RUN apt-get update && apt-get install --no-install-recommends -y \
+  build-essential \
+  libpq-dev \
+  default-libmysqlclient-dev \
+  libffi-dev \
+  libjpeg-dev \
+  libxml2-dev \
+  libxslt1-dev \
+  gcc \
+  && rm -rf /var/lib/apt/lists/*
+
+COPY ./requirements .
+
+# Build Python wheels
+RUN pip wheel --wheel-dir /usr/src/app/wheels  \
+  -r ${BUILD_ENVIRONMENT}.txt -i https://pypi.tuna.tsinghua.edu.cn/simple
+
+# Copy application code to WORKDIR
+COPY . ${APP_HOME}
+WORKDIR ${APP_HOME}/moment
+
+# Python 'run' stage
+FROM python AS python-run-stage
+LABEL title="PhotoZen | 照片管理软件"
+LABEL description="『PhotoZen』NAS高性能的自托管照片和视频管理解决方案"
+LABEL authors="xhongc"
+
+ARG BUILD_ENVIRONMENT=prod
+ARG APP_HOME=/app
+
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV BUILD_ENV=${BUILD_ENVIRONMENT}
+ENV PUID=0
+ENV PGID=0
+ENV UMASK=022
+WORKDIR ${APP_HOME}/moment
+
+# Install only runtime dependencies
+RUN apt-get update && apt-get install --no-install-recommends -y \
+  # Runtime dependencies only
+  libpq5 \
+  default-libmysqlclient21 \
+  libffi7 \
+  libjpeg62-turbo \
+  libxml2 \
+  libxslt1.1 \
+  # Clean up in same layer to reduce image size
+  && rm -rf /var/lib/apt/lists/* \
+  && apt-get clean
+
+# Copy wheels from build stage and install
+COPY --from=python-build-stage /usr/src/app/wheels  /wheels/
+RUN pip install --no-cache-dir --no-index --find-links=/wheels/ /wheels/* \
+	&& rm -rf /wheels/
+
+# Copy and setup scripts
+COPY ./compose/django/start /start
+COPY ./compose/django/entrypoint.sh /entrypoint.sh
+RUN sed -i 's/\r$//g' /start /entrypoint.sh \
+  && chmod +x /start /entrypoint.sh
+
+# Copy application code
+COPY --from=python-build-stage ${APP_HOME} ${APP_HOME}
+
+ENTRYPOINT ["/entrypoint.sh"]
+CMD ["/start"]
+EXPOSE 8008

@@ -34,7 +34,7 @@ const myMsg = {
      */
     notify: (options: NotifyOptions): void => {
         const {
-            content,
+            content = '',
             type,
             time = 1500,
             url = '',

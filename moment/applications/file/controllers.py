@@ -1,10 +1,12 @@
 from typing import List, Optional
-from ninja import Router, File, Form
+from ninja_extra import ControllerBase, api_controller, route
+from ninja_extra.permissions import IsAuthenticated
+from ninja_jwt.authentication import JWTAuth
+from ninja import Form, Schema
+
 from ninja.files import UploadedFile
-from ninja.security import HttpBearer
 from django.conf import settings
-from django.http import HttpResponse, FileResponse
-from django.core.files.storage import default_storage
+from django.http import FileResponse
 from django.contrib.auth.models import User
 from pydantic import BaseModel
 import os
@@ -12,19 +14,11 @@ import mimetypes
 from datetime import datetime
 import shutil
 from pathlib import Path
-import magic
 import PIL.Image
+import io
 
-class AuthBearer(HttpBearer):
-    def authenticate(self, request, token):
-        try:
-            # 这里替换为你的实际token验证逻辑
-            user = User.objects.get(auth_token__key=token)
-            return user
-        except User.DoesNotExist:
-            return None
-
-router = Router(auth=AuthBearer())
+from moment.schema import SuccessResponse
+from applications.file.models import RecycleItem as DBRecycleItem
 
 # 配置常量
 MAX_UPLOAD_SIZE = 50 * 1024 * 1024  # 50MB
@@ -34,6 +28,11 @@ ALLOWED_EXTENSIONS = {
     'video': ['.mp4', '.mov', '.avi'],
     'audio': ['.mp3', '.wav', '.ogg']
 }
+
+# 图片处理相关的常量
+MAX_IMAGE_DIMENSION = 4096  # 最大图片尺寸
+ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
+THUMBNAIL_SIZES = [(200, 200), (400, 400)]  # 缩略图尺寸列表
 
 class FileItem(BaseModel):
     name: str
@@ -58,263 +57,476 @@ class QuotaInfo(BaseModel):
     total: int
     percentage: float
 
-def get_mime_type(file_path):
-    """获取文件的MIME类型"""
-    mime = magic.Magic(mime=True)
-    return mime.from_file(file_path)
+class UploadResponse(BaseModel):
+    message: str
+    path: str
+    thumbnails: Optional[List[str]] = None
 
-def is_file_allowed(filename, mime_type):
-    """检查文件类型是否允许"""
-    ext = os.path.splitext(filename)[1].lower()
-    for extensions in ALLOWED_EXTENSIONS.values():
-        if ext in extensions:
-            return True
-    return False
+class UploadFileSchema(BaseModel):
+    path: str
 
-def get_user_quota(user):
-    """获取用户配额信息"""
-    # 这里替换为实际的用户配额逻辑
-    total_quota = 1024 * 1024 * 1024  # 1GB
-    used_quota = sum(
-        os.path.getsize(os.path.join(dirpath, filename))
-        for dirpath, _, filenames in os.walk(os.path.join(settings.MEDIA_ROOT, str(user.id)))
-        for filename in filenames
-    )
-    return QuotaInfo(
-        used=used_quota,
-        total=total_quota,
-        percentage=(used_quota / total_quota) * 100
-    )
+class DeleteFileSchema(BaseModel):
+    path: str
 
-def create_thumbnail(image_path, size=(200, 200)):
-    """为图片创建缩略图"""
-    try:
-        with PIL.Image.open(image_path) as img:
-            img.thumbnail(size)
-            thumbnail_path = f"{image_path}_thumb.jpg"
-            img.save(thumbnail_path, "JPEG")
-            return thumbnail_path
-    except Exception:
-        return None
+class RecycleItemResponse(BaseModel):
+    name: str
+    path: str
+    original_path: str
+    size: Optional[int]
+    delete_time: str
+    remaining_days: int
+    mime_type: Optional[str] = None
+    preview_url: Optional[str] = None
 
-@router.get("/list")
-def list_directory(request, path: str = ""):
-    """获取指定目录下的文件和文件夹列表"""
-    user_base_path = os.path.join(settings.MEDIA_ROOT, str(request.auth.id))
-    base_path = os.path.join(user_base_path, path.strip("/"))
-    items = []
-    folder_count = 0
-    file_count = 0
-    total_size = 0
+class RecycleListResponse(BaseModel):
+    items: List[RecycleItemResponse]
+    total_count: int
+    page: int
+    page_size: int
 
-    try:
-        for entry in os.scandir(base_path):
-            modified_time = datetime.fromtimestamp(entry.stat().st_mtime)
-            mime_type = None
-            preview_url = None
-            
-            if entry.is_dir():
-                folder_count += 1
-                size = None
-                file_type = "文件夹"
-            else:
-                file_count += 1
-                size = entry.stat().st_size
-                total_size += size
-                ext = os.path.splitext(entry.name)[1].lower()
-                file_type = ext[1:].upper() + " 文件" if ext else "文件"
-                mime_type = get_mime_type(entry.path)
-                
-                # 为图片生成预览URL
-                if mime_type.startswith('image/'):
-                    preview_url = f"/api/file/preview/{os.path.relpath(entry.path, settings.MEDIA_ROOT)}"
+class BatchOperationSchema(BaseModel):
+    paths: List[str]
 
-            items.append(FileItem(
-                name=entry.name,
-                path=os.path.join(path, entry.name),
-                type=file_type,
-                size=size,
-                modified_date=modified_time.strftime("%Y/%m/%d"),
-                is_dir=entry.is_dir(),
-                preview_url=preview_url,
-                mime_type=mime_type
-            ))
+@api_controller("/files", auth=JWTAuth(), permissions=[IsAuthenticated])
+class FileController(ControllerBase):
+    model_config = {
+        "arbitrary_types_allowed": True
+    }
 
-        quota = get_user_quota(request.auth)
-        
-        return DirectoryResponse(
-            items=sorted(items, key=lambda x: (not x.is_dir, x.name)),
-            total_count=len(items),
-            folder_count=folder_count,
-            file_count=file_count,
-            total_size=total_size,
-            quota_used=quota.percentage
+    def get_user_quota(self, user):
+        """获取用户配额信息"""
+        total_quota = 1024 * 1024 * 1024  # 1GB
+        used_quota = sum(
+            os.path.getsize(os.path.join(dirpath, filename))
+            for dirpath, _, filenames in os.walk(os.path.join(settings.MEDIA_ROOT, str(user.id)))
+            for filename in filenames
         )
-    except Exception as e:
-        return {"error": str(e)}, 400
+        return QuotaInfo(
+            used=used_quota,
+            total=total_quota,
+            percentage=(used_quota / total_quota) * 100
+        )
 
-@router.post("/upload")
-def upload_file(request, file: UploadedFile = File(...), path: str = Form(...)):
-    """上传文件到指定目录"""
-    try:
-        # 检查文件大小
-        if file.size > MAX_UPLOAD_SIZE:
-            return {"error": "文件大小超过限制"}, 400
-
-        # 检查用户配额
-        quota = get_user_quota(request.auth)
-        if quota.used + file.size > quota.total:
-            return {"error": "存储空间不足"}, 400
-
-        # 检查文件类型
-        mime_type = magic.from_buffer(file.read(1024), mime=True)
-        file.seek(0)  # 重置文件指针
-        if not is_file_allowed(file.name, mime_type):
-            return {"error": "不支持的文件类型"}, 400
-
-        # 构建用户特定的上传路径
-        user_upload_path = os.path.join(settings.MEDIA_ROOT, str(request.auth.id), path.strip("/"))
-        os.makedirs(user_upload_path, exist_ok=True)
-        
-        file_path = os.path.join(user_upload_path, file.name)
-        
-        # 保存文件
-        with open(file_path, "wb+") as destination:
-            for chunk in file.chunks():
-                destination.write(chunk)
-        
-        # 如果是图片，创建缩略图
-        if mime_type.startswith('image/'):
-            create_thumbnail(file_path)
-                
-        return {"message": "文件上传成功"}
-    except Exception as e:
-        return {"error": str(e)}, 400
-
-@router.get("/preview/{path:path}")
-def preview_file(request, path: str):
-    """获取文件预览"""
-    try:
-        file_path = os.path.join(settings.MEDIA_ROOT, str(request.auth.id), path)
-        mime_type = get_mime_type(file_path)
-        
-        # 对于图片类型，返回缩略图
-        if mime_type.startswith('image/'):
-            thumb_path = f"{file_path}_thumb.jpg"
-            if os.path.exists(thumb_path):
-                return FileResponse(open(thumb_path, 'rb'), content_type='image/jpeg')
-        
-        # 对于其他类型，返回原始文件
-        return FileResponse(open(file_path, 'rb'), content_type=mime_type)
-    except Exception as e:
-        return {"error": str(e)}, 400
-
-@router.get("/download/{path:path}")
-def download_file(request, path: str):
-    """下载文件"""
-    try:
-        file_path = os.path.join(settings.MEDIA_ROOT, str(request.auth.id), path)
-        if os.path.exists(file_path) and os.path.isfile(file_path):
-            response = FileResponse(open(file_path, 'rb'))
-            response['Content-Disposition'] = f'attachment; filename="{os.path.basename(path)}"'
-            return response
-        return {"error": "文件不存在"}, 404
-    except Exception as e:
-        return {"error": str(e)}, 400
-
-@router.post("/create-folder")
-def create_folder(request, path: str, name: str):
-    """创建新文件夹"""
-    try:
-        new_folder_path = os.path.join(settings.MEDIA_ROOT, path.strip("/"), name)
-        os.makedirs(new_folder_path, exist_ok=True)
-        return {"message": "文件夹创建成功"}
-    except Exception as e:
-        return {"error": str(e)}, 400
-
-@router.get("/tree")
-def get_directory_tree(request, root: str = ""):
-    """获取目录树结构"""
-    base_path = os.path.join(settings.MEDIA_ROOT, root.strip("/"))
-    
-    def scan_directory(path):
-        items = []
+    def validate_image(self, file: UploadedFile) -> tuple[bool, str]:
+        """验证图片文件"""
         try:
-            for entry in os.scandir(path):
-                if entry.is_dir():
-                    items.append({
-                        "name": entry.name,
-                        "path": os.path.relpath(entry.path, settings.MEDIA_ROOT),
-                        "children": scan_directory(entry.path) if entry.is_dir() else None
-                    })
-        except Exception:
-            pass
-        return items
+            # 检查文件大小
+            if file.size > MAX_UPLOAD_SIZE:
+                return False, "图片大小超过限制"
+                
+                
+            # 检查图片尺寸
+            with PIL.Image.open(file) as img:
+                if max(img.size) > MAX_IMAGE_DIMENSION:
+                    return False, "图片尺寸过大"
+                file.seek(0)
+                
+            return True, ""
+        except Exception as e:
+            return False, f"图片验证失败: {str(e)}"
 
-    return {"tree": scan_directory(base_path)}
-
-@router.delete("/delete")
-def delete_item(request, path: str):
-    """删除文件或文件夹"""
-    try:
-        full_path = os.path.join(settings.MEDIA_ROOT, path.strip("/"))
-        if os.path.isdir(full_path):
-            shutil.rmtree(full_path)
-        else:
-            os.remove(full_path)
-        return {"message": "删除成功"}
-    except Exception as e:
-        return {"error": str(e)}, 400
-
-@router.get("/quota")
-def get_quota(request):
-    """获取用户存储配额信息"""
-    return get_user_quota(request.auth)
-
-@router.post("/move")
-def move_item(request, source: str, destination: str):
-    """移动文件或文件夹"""
-    try:
-        user_base_path = os.path.join(settings.MEDIA_ROOT, str(request.auth.id))
-        source_path = os.path.join(user_base_path, source.strip("/"))
-        dest_path = os.path.join(user_base_path, destination.strip("/"))
-        
-        # 确保目标目录存在
-        os.makedirs(os.path.dirname(dest_path), exist_ok=True)
-        
-        shutil.move(source_path, dest_path)
-        return {"message": "移动成功"}
-    except Exception as e:
-        return {"error": str(e)}, 400
-
-@router.post("/copy")
-def copy_item(request, source: str, destination: str):
-    """复制文件或文件夹"""
-    try:
-        user_base_path = os.path.join(settings.MEDIA_ROOT, str(request.auth.id))
-        source_path = os.path.join(user_base_path, source.strip("/"))
-        dest_path = os.path.join(user_base_path, destination.strip("/"))
-        
-        # 检查配额
-        quota = get_user_quota(request.auth)
-        if os.path.isfile(source_path):
-            required_space = os.path.getsize(source_path)
-        else:
-            required_space = sum(os.path.getsize(os.path.join(dirpath, f))
-                               for dirpath, _, filenames in os.walk(source_path)
-                               for f in filenames)
-        
-        if quota.used + required_space > quota.total:
-            return {"error": "存储空间不足"}, 400
+    def process_image(self, file_path: str) -> list[str]:
+        """处理上传的图片，生成不同尺寸的缩略图"""
+        thumbnail_paths = []
+        try:
+            with PIL.Image.open(file_path) as img:
+                # 转换为RGB模式（如果是RGBA）
+                if img.mode in ('RGBA', 'LA'):
+                    background = PIL.Image.new('RGB', img.size, (255, 255, 255))
+                    background.paste(img, mask=img.split()[-1])
+                    img = background
+                elif img.mode != 'RGB':
+                    img = img.convert('RGB')
+                    
+                # 生成不同尺寸的缩略图
+                for width, height in THUMBNAIL_SIZES:
+                    thumb = img.copy()
+                    thumb.thumbnail((width, height), PIL.Image.Resampling.LANCZOS)
+                    thumb_path = f"{file_path}_{width}x{height}.jpg"
+                    thumb.save(thumb_path, "JPEG", quality=85)
+                    thumbnail_paths.append(thumb_path)
+                    
+                # 优化原图
+                img.save(file_path, "JPEG", quality=90, optimize=True)
+                
+        except Exception as e:
+            print(f"图片处理失败: {str(e)}")
             
-        # 确保目标目录存在
-        os.makedirs(os.path.dirname(dest_path), exist_ok=True)
-        
-        if os.path.isdir(source_path):
-            shutil.copytree(source_path, dest_path)
-        else:
-            shutil.copy2(source_path, dest_path)
+        return thumbnail_paths
+
+    @route.post("/upload", response=UploadResponse)
+    def upload_file(self, file: UploadedFile = None, data: Form[UploadFileSchema] = None):
+        """上传文件到指定目录"""
             
-        return {"message": "复制成功"}
-    except Exception as e:
-        return {"error": str(e)}, 400
+        path = data.path
+        try:
+            # 检查用户配额
+            quota = self.get_user_quota(self.context.request.user)
+            if quota.used + file.size > quota.total:
+                return UploadResponse(
+                    message="存储空间不足",
+                    path=""
+                )
+
+            # 构建用户特定的上传路径
+            user_upload_path = os.path.join(settings.MEDIA_ROOT, str(self.context.request.user.username), path.strip("/"))
+            os.makedirs(user_upload_path, exist_ok=True)
+            
+            file_path = os.path.join(user_upload_path, file.name)
+            
+            # 检查文件类型
+            file_type = file.content_type
+            
+            if file_type.startswith('image/'):
+                # 验证图片
+                is_valid, error_msg = self.validate_image(file)
+                if not is_valid:
+                    return UploadResponse(
+                        message=error_msg,
+                        path=""
+                    )
+                    
+                # 保存原始图片
+                with open(file_path, "wb+") as destination:
+                    for chunk in file.chunks():
+                        destination.write(chunk)
+                        
+                # 处理图片（生成缩略图等）
+                thumbnail_paths = self.process_image(file_path)
+                
+                return UploadResponse(
+                    message="图片上传成功",
+                    path=file_path,
+                    thumbnails=thumbnail_paths
+                )
+            else:
+                # 处理非图片文件
+                ext = os.path.splitext(file.name)[1].lower()
+                if not any(ext in extensions for extensions in ALLOWED_EXTENSIONS.values()):
+                    return UploadResponse(
+                        message="不支持的文件类型",
+                        path=""
+                    )
+                    
+                with open(file_path, "wb+") as destination:
+                    for chunk in file.chunks():
+                        destination.write(chunk)
+                        
+                return UploadResponse(
+                    message="文件上传成功",
+                    path=file_path
+                )
+                
+        except Exception as e:
+            return UploadResponse(
+                message=str(e),
+                path=""
+            )
+
+    @route.get("/preview/{path:path}")
+    def preview_file(self, path: str):
+        """获取文件预览"""
+        try:
+            file_path = os.path.join(settings.MEDIA_ROOT, str(self.context.request.user.id), path)
+            mime_type = magic.from_file(file_path)
+            
+            # 对于图片类型，返回缩略图
+            if mime_type.startswith('image/'):
+                thumb_path = f"{file_path}_thumb.jpg"
+                if os.path.exists(thumb_path):
+                    return FileResponse(open(thumb_path, 'rb'), content_type='image/jpeg')
+            
+            # 对于其他类型，返回原始文件
+            return FileResponse(open(file_path, 'rb'), content_type=mime_type)
+        except Exception as e:
+            return {"error": str(e)}, 400
+
+    @route.get("/download/{path:path}")
+    def download_file(self, path: str):
+        """下载文件"""
+        try:
+            file_path = os.path.join(settings.MEDIA_ROOT, str(self.context.request.user.id), path)
+            if os.path.exists(file_path) and os.path.isfile(file_path):
+                response = FileResponse(open(file_path, 'rb'))
+                response['Content-Disposition'] = f'attachment; filename="{os.path.basename(path)}"'
+                return response
+            return {"error": "文件不存在"}, 404
+        except Exception as e:
+            return {"error": str(e)}, 400
+
+    @route.post("/create-folder")
+    def create_folder(self, path: str, name: str):
+        """创建新文件夹"""
+        try:
+            new_folder_path = os.path.join(settings.MEDIA_ROOT, str(self.context.request.user.id), path.strip("/"), name)
+            os.makedirs(new_folder_path, exist_ok=True)
+            return {"message": "文件夹创建成功"}
+        except Exception as e:
+            return {"error": str(e)}, 400
+
+    @route.get("/tree")
+    def get_directory_tree(self, root: str = ""):
+        """获取目录树结构"""
+        base_path = os.path.join(settings.MEDIA_ROOT, str(self.context.request.user.id), root.strip("/"))
+        
+        def scan_directory(path):
+            items = []
+            try:
+                for entry in os.scandir(path):
+                    if entry.is_dir():
+                        items.append({
+                            "name": entry.name,
+                            "path": os.path.relpath(entry.path, settings.MEDIA_ROOT),
+                            "children": scan_directory(entry.path) if entry.is_dir() else None
+                        })
+            except Exception:
+                pass
+            return items
+
+        return {"tree": scan_directory(base_path)}
+
+    @route.delete("/delete", response=SuccessResponse)
+    def delete_item(self, data: DeleteFileSchema):
+        """删除文件或文件夹(移入回收站)"""
+        path = data.path
+        try:
+            # 获取用户回收站路径
+            recycle_path = settings.RECYCLE_PATH
+            # 确保回收站目录存在
+            os.makedirs(recycle_path, exist_ok=True)
+            
+            # 源文件完整路径
+            full_path = os.path.join(settings.MEDIA_ROOT, path.strip("/"))
+            
+            # 目标路径(回收站中)
+            if path.startswith('/'):
+                path = path[1:]
+            dest_path = os.path.join(recycle_path, path)
+            os.makedirs(os.path.dirname(dest_path), exist_ok=True)
+            # 如果目标路径已存在,添加时间戳
+            if os.path.exists(dest_path):
+                timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+                filename = f"{os.path.splitext(os.path.basename(path))[0]}_{timestamp}{os.path.splitext(path)[1]}"
+                dest_path = os.path.join(recycle_path, filename)
+            # 移动到回收站
+            shutil.move(full_path, dest_path)
+            size = os.path.getsize(dest_path)
+            DBRecycleItem.objects.create(
+                path=path,
+                original_path=full_path,
+                size=size,
+                delete_time=datetime.now(),
+                remaining_days=30
+            )
+            return {
+                "msg": "已移入回收站",
+                "result": True
+            }
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            return {
+                "msg": str(e),
+                "result": False
+            }
+
+    @route.get("/quota", response=QuotaInfo)
+    def get_quota(self):
+        """获取用户存储配额信息"""
+        return self.get_user_quota(self.context.request.user)
+
+    @route.post("/move")
+    def move_item(self, source: str, destination: str):
+        """移动文件或文件夹"""
+        try:
+            user_base_path = os.path.join(settings.MEDIA_ROOT, str(self.context.request.user.id))
+            source_path = os.path.join(user_base_path, source.strip("/"))
+            dest_path = os.path.join(user_base_path, destination.strip("/"))
+            
+            # 确保目标目录存在
+            os.makedirs(os.path.dirname(dest_path), exist_ok=True)
+            
+            shutil.move(source_path, dest_path)
+            return {"message": "移动成功"}
+        except Exception as e:
+            return {"error": str(e)}, 400
+
+    @route.post("/copy")
+    def copy_item(self, source: str, destination: str):
+        """复制文件或文件夹"""
+        try:
+            user_base_path = os.path.join(settings.MEDIA_ROOT, str(self.context.request.user.id))
+            source_path = os.path.join(user_base_path, source.strip("/"))
+            dest_path = os.path.join(user_base_path, destination.strip("/"))
+            
+            # 检查配额
+            quota = self.get_user_quota(self.context.request.user)
+            if os.path.isfile(source_path):
+                required_space = os.path.getsize(source_path)
+            else:
+                required_space = sum(os.path.getsize(os.path.join(dirpath, f))
+                                   for dirpath, _, filenames in os.walk(source_path)
+                                   for f in filenames)
+            
+            if quota.used + required_space > quota.total:
+                return {"error": "存储空间不足"}, 400
+                
+            # 确保目标目录存在
+            os.makedirs(os.path.dirname(dest_path), exist_ok=True)
+            
+            if os.path.isdir(source_path):
+                shutil.copytree(source_path, dest_path)
+            else:
+                shutil.copy2(source_path, dest_path)
+                
+            return {"message": "复制成功"}
+        except Exception as e:
+            return {"error": str(e)}, 400
+
+    @route.get("/recycle", response=RecycleListResponse)
+    def get_recycle_list(self, page: int = 1, page_size: int = 20):
+        """获取回收站列表"""
+        try:
+            # 从数据库获取回收站项目
+            total_count = DBRecycleItem.objects.count()
+            items = DBRecycleItem.objects.all()[(page-1)*page_size:page*page_size]
+
+            # 转换为响应格式
+            recycle_items = []
+            for item in items:
+                # 获取文件类型
+                mime_type = mimetypes.guess_type(item.path)[0]
+                
+                recycle_item = RecycleItemResponse(
+                    name=os.path.basename(item.path),
+                    path=item.path,
+                    original_path=item.original_path,
+                    size=item.size,
+                    delete_time=item.delete_time.strftime('%Y-%m-%d %H:%M:%S'),
+                    remaining_days=item.remaining_days,
+                    mime_type=mime_type,
+                    preview_url=f"/api/files/preview/{item.path}" if mime_type and mime_type.startswith('image/') else None
+                )
+                recycle_items.append(recycle_item)
+
+            return RecycleListResponse(
+                items=recycle_items,
+                total_count=total_count,
+                page=page,
+                page_size=page_size
+            )
+        except Exception as e:
+            return RecycleListResponse(
+                items=[],
+                total_count=0,
+                page=page,
+                page_size=page_size
+            )
+
+    @route.post("/recycle/restore", response=SuccessResponse)
+    def restore_file(self, path: str):
+        """恢复文件"""
+        try:
+            # 从数据库获取回收项
+            recycle_item = DBRecycleItem.objects.get(path=path)
+            recycle_path = settings.RECYCLE_PATH
+            file_path = os.path.join(recycle_path, path)
+            
+            if not os.path.exists(file_path):
+                return {
+                    "msg": "文件不存在",
+                    "result": False
+                }
+            
+            # 获取原始路径
+            original_path = os.path.join(settings.MEDIA_ROOT, str(self.context.request.user.id), recycle_item.original_path)
+            os.makedirs(os.path.dirname(original_path), exist_ok=True)
+            
+            # 移动文件
+            shutil.move(file_path, original_path)
+            
+            # 从数据库删除记录
+            recycle_item.delete()
+            
+            return {
+                "msg": "文件已恢复",
+                "result": True
+            }
+        except DBRecycleItem.DoesNotExist:
+            return {
+                "msg": "回收项不存在",
+                "result": False
+            }
+        except Exception as e:
+            return {
+                "msg": str(e),
+                "result": False
+            }
+
+    @route.post("/recycle/restore-batch", response=SuccessResponse)
+    def restore_files_batch(self, data: BatchOperationSchema):
+        """批量恢复文件"""
+        try:
+            success_count = 0
+            for path in data.paths:
+                result = self.restore_file(path)
+                if result["result"]:
+                    success_count += 1
+            
+            return {
+                "msg": f"成功恢复 {success_count}/{len(data.paths)} 个文件",
+                "result": True
+            }
+        except Exception as e:
+            return {
+                "msg": str(e),
+                "result": False
+            }
+
+    @route.delete("/recycle/delete", response=SuccessResponse)
+    def delete_from_recycle(self, path: str):
+        """从回收站永久删除文件"""
+        try:
+            recycle_path = settings.RECYCLE_PATH
+            file_path = os.path.join(recycle_path, path)
+            
+            if not os.path.exists(file_path):
+                return {
+                    "msg": "文件不存在",
+                    "result": False
+                }
+            
+            if os.path.isdir(file_path):
+                shutil.rmtree(file_path)
+            else:
+                os.remove(file_path)
+            
+            return {
+                "msg": "文件已永久删除",
+                "result": True
+            }
+        except Exception as e:
+            return {
+                "msg": str(e),
+                "result": False
+            }
+
+    @route.delete("/recycle/delete-batch", response=SuccessResponse)
+    def delete_from_recycle_batch(self, data: BatchOperationSchema):
+        """批量从回收站永久删除文件"""
+        try:
+            success_count = 0
+            for path in data.paths:
+                result = self.delete_from_recycle(path)
+                if result["result"]:
+                    success_count += 1
+            
+            return {
+                "msg": f"成功删除 {success_count}/{len(data.paths)} 个文件",
+                "result": True
+            }
+        except Exception as e:
+            return {
+                "msg": str(e),
+                "result": False
+            }

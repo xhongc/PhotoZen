@@ -9,7 +9,7 @@ class Album(models.Model):
     description = models.TextField(blank=True)
     created_time = models.DateTimeField(auto_now_add=True)
     updated_time = models.DateTimeField(auto_now=True)
-    owner = models.ForeignKey(User, on_delete=models.CASCADE, related_name='albums')
+    owner = models.ForeignKey(User, on_delete=models.SET_NULL, related_name='albums', null=True, blank=True)
     cover_photo = models.ForeignKey('photos.Photo', on_delete=models.SET_NULL, null=True, blank=True, related_name='album_covers')
     photos = models.ManyToManyField('photos.Photo', related_name='albums', blank=True)
 

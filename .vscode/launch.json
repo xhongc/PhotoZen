@@ -6,7 +6,7 @@
     "configurations": [
         
         {
-            "name": "1Moment",
+            "name": "PhotoZen",
             "type": "debugpy",
             "request": "launch",
             "args": [

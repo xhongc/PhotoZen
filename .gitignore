@@ -27,3 +27,6 @@ supervisord.pid
 .ruff_cache
 /.VSCodeCounter/*
 spotify_token.json
+recycle/
+/moment/media/
+/moment/recycle/

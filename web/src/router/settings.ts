@@ -59,11 +59,11 @@ const settingsRoutes: RouteRecordRaw[] = [
                 }
             },
             {
-                path: 'appearance',
-                name: 'SettingsAppearance',
-                component: () => import('@/views/settings/appearance.vue'),
+                path: 'recycle',
+                name: 'SettingsRecycle',
+                component: () => import('@/views/settings/recycle.vue'),
                 meta: {
-                    title: '外观设置',
+                    title: '回收站',
                     fatherName: 'settings'
                 }
             },

@@ -1,6 +1,4 @@
 <template>
-  <header>
-  </header>
   <magic-menu v-if="$route.name !== 'login'"></magic-menu>
   <div v-else style="height: 100%;">
     <login></login>

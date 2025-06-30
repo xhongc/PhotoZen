@@ -61,8 +61,8 @@ class PhotoSchema(Schema):
     
     @staticmethod
     def resolve_file_path(obj) -> str:
-        return f"http://127.0.0.1:8000/media/Downloads/{obj.file_path}"
+        return f"http://127.0.0.1:8000/media/{obj.file_path}"
 
     @staticmethod
     def resolve_thumbnail_path(obj) -> str:
-        return f"http://127.0.0.1:8000/media/Downloads/{obj.file_path}"
+        return f"http://127.0.0.1:8000/media/{obj.file_path}"

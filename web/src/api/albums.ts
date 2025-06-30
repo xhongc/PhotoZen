@@ -17,7 +17,7 @@ export interface Album {
 export const albumApi = {
   // 获取相册列表
   getAlbums(): Promise<Album[]> {
-    return api.get('/albums').then(response => response.data)
+    return api.get('/albums').then(response => response.data.results)
   },
 
   // 获取单个相册详情
@@ -55,8 +55,13 @@ export const albumApi = {
     return api.post(`/albums/${albumId}/photos/bulk`, { photo_ids: photoIds }).then(response => response.data)
   },
 
+  // 批量添加照片到收藏
+  bulkAddPhotosToFavorite(photoIds: number[]): Promise<Album> {
+    return api.post(`/favorite/photos/bulk`, { photo_ids: photoIds }).then(response => response.data)
+  },
+
   // 从相册中移除照片
   removePhotoFromAlbum(albumId: number, photoId: number): Promise<void> {
-    return api.delete(`/photos/${photoId}/albums/${albumId}`)
+    return api.delete(`/albums/${albumId}/photos/${photoId}`)
   }
 }

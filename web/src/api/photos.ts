@@ -45,6 +45,7 @@ export interface PhotoListParams {
   page?: number
   page_size?: number
   group_by?: string
+  album_id?: number
 }
 
 export interface PhotoGroup {

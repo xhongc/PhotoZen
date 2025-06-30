@@ -86,15 +86,14 @@ const handleLogin = async () => {
     loading.value = true
     error.value = ''
     
-    const response = await authApi.login({
+    await authApi.login({
       username: username.value,
       password: password.value
-    })
-
-    authStore.setAuth(response)
-    
+    }).then(resp => {
+      authStore.setAuth(resp)
     // 登录成功后跳转到首页
     router.push('/')
+    })
   } catch (err: any) {
     error.value = err.response?.data?.detail || '登录失败，请检查用户名和密码'
     console.error('登录失败：', err)

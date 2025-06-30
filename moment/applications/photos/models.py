@@ -19,7 +19,7 @@ class Photo(models.Model):
     file_path = models.ImageField(upload_to='photos/%Y/%m/%d/')
     thumbnail_path = models.ImageField(upload_to='thumbnails/%Y/%m/%d/', blank=True)
     upload_time = models.DateTimeField(default=timezone.now)
-    taken_time = models.DateTimeField(null=False, blank=False)
+    taken_time = models.DateTimeField(null=False, blank=False, default=timezone.now)
     size = models.IntegerField()  # File size in bytes
     width = models.IntegerField()
     height = models.IntegerField()

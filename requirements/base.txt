@@ -7,4 +7,9 @@ pydantic_core==2.27.2
 sqlparse==0.5.3
 typing_extensions==4.12.2
 django-ninja-jwt==5.3.5
-ninja_extra==0.5.3
+django-ninja-extra==0.22.3
+lxml==5.3.1
+gunicorn==20.1.0
+gevent==22.10.2
+Pillow==9.4.0
+ninja-schema==0.14.1

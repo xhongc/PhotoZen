@@ -19,6 +19,9 @@ const router = createRouter({
       path: '/photos',
       name: 'photos',
       component: () => import('../views/photos/PhotosView.vue'),
+      meta: {
+        keepAlive: true
+      }
     },
     {
       path: '/photos/:id/edit',
@@ -34,6 +37,11 @@ const router = createRouter({
       path: '/albums',
       name: 'albums',
       component: () => import('../views/albums/AlbumsView.vue'),
+    },
+    {
+      path: '/albums/:id',
+      name: 'album-detail',
+      component: () => import('../views/albums/AlbumDetailView.vue'),
     },
     {
       path: '/tags',

@@ -1,4 +1,4 @@
-# 1Moment
+# PhotoZen
 记录生活之美，留住珍贵时刻 —— 1Monent
 
 Music tag web 作者的 NAS相册管理软件
@@ -135,3 +135,7 @@ Music tag web 作者的 NAS相册管理软件
 
 # 用户截图
 ![xx](./image.png)
+
+# DOCKER 打包
+docker build -f compose/django/Dockerfilearm -t xhongc/photozen:latest .    
+docker-compose -f ./compose/django/compose.yml up                       
