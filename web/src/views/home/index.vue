@@ -88,20 +88,31 @@
         </div>
 
         <!-- 今日回忆 -->
-        <div class="bg-base-100 shadow rounded-lg mb-6">
+        <div class="bg-base-100 shadow rounded-lg mb-6" v-if="memoriesData && memoriesData.memories.length > 0">
             <div class="px-4 py-5 border-b border-base-200 sm:px-6">
                 <div class="flex items-center justify-between">
                     <h3 class="text-lg leading-6 font-medium text-base-900">今日回忆</h3>
-                    <span class="text-sm text-primary-600">2年前的今天</span>
+                    <span class="text-sm text-primary-600" v-if="memoriesData.memories.length > 0">
+                        {{ memoriesData.memories[0].years_ago }}年前的今天
+                    </span>
                 </div>
             </div>
             <div class="px-4 py-5 sm:p-6">
-                <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                    <div class="relative rounded-lg overflow-hidden">
-                        <img src="https://images.unsplash.com/photo-1682687220742-aba13b6e50ba" alt=""
-                            class="w-full h-48 object-cover">
-                        <div class="absolute bottom-0 left-0 right-0 px-4 py-2 bg-gradient-to-t from-black">
-                            <p class="text-white text-sm">2022年3月20日</p>
+                <div v-for="yearMemory in memoriesData.memories" :key="yearMemory.year" class="mb-6 last:mb-0">
+                    <div class="flex items-center justify-between mb-3">
+                        <h4 class="text-md font-medium text-base-700">{{ yearMemory.year }}年 ({{ yearMemory.years_ago }}年前)</h4>
+                        <span class="text-sm text-gray-500">{{ yearMemory.photos.length }}张照片</span>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
+                        <div v-for="photo in yearMemory.photos" :key="photo.id" class="relative rounded-lg overflow-hidden group cursor-pointer">
+                            <img :src="photo.thumbnail_path" :alt="photo.title"
+                                class="w-full h-24 object-cover group-hover:scale-105 transition-all duration-300">
+                            <div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-all duration-300">
+                                <div class="absolute bottom-0 left-0 right-0 p-2">
+                                    <p class="text-white text-xs truncate">{{ photo.title }}</p>
+                                    <p class="text-white/80 text-xs">{{ formatDate(photo.taken_time) }}</p>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -137,14 +148,21 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { homeApi, type HomeData } from '@/api/home'
+import { homeApi, type HomeData, type MemoriesData } from '@/api/home'
 import { photoApi, type Photo } from '@/api/photos'
+
 const homeData = ref<HomeData>()
 const recentPhotos = ref<Photo[]>([])
+const memoriesData = ref<MemoriesData>()
+
 onMounted(async () => {
-    await fetchHomeData()
-    await fetchRecentPhotos()
+    await Promise.all([
+        fetchHomeData(),
+        fetchRecentPhotos(),
+        fetchTodayMemories()
+    ])
 })
+
 const fetchHomeData = async () => {
     try {
         const response = await homeApi.getHome()
@@ -153,6 +171,7 @@ const fetchHomeData = async () => {
         console.error('获取首页数据失败:', error)
     }
 }
+
 const fetchRecentPhotos = async () => {
     try {
         const response = await photoApi.getPhotos(
@@ -166,6 +185,25 @@ const fetchRecentPhotos = async () => {
     } catch (error) {
         console.error('获取最近照片失败:', error)
     }
+}
+
+const fetchTodayMemories = async () => {
+    try {
+        const response = await homeApi.getTodayMemories()
+        memoriesData.value = response
+    } catch (error) {
+        console.error('获取今日回忆失败:', error)
+    }
+}
+
+const formatDate = (dateString: string) => {
+    const date = new Date(dateString)
+    return date.toLocaleDateString('zh-CN', {
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit'
+    })
 }
 </script>
 

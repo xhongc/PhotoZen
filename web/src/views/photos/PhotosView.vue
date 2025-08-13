@@ -116,10 +116,15 @@
                       class="w-5 h-5 text-primary-600 rounded border-gray-300 focus:ring-primary-500 checkbox">
                   </div>
                   <div
-                    class="w-full md:h-[180px] 2xl:h-[300px] h-[180px] bg-gray-200 rounded-lg overflow-hidden cursor-pointer"
+                    class="w-full md:h-[180px] 2xl:h-[300px] h-[180px] cursor-pointer"
                     @click="isSelectMode && togglePhotoSelection(photo.id)">
-                    <img :src="photo.thumbnail_path" :alt="photo.title"
-                      :class="[isSelectMode && selectedPhotos.includes(photo.id) ? 'brightness-75 p-2' : 'opacity-100', 'w-full h-full object-cover group-hover:opacity-75 transition-opacity']">
+                    <LazyImage 
+                      :src="photo.thumbnail_path" 
+                      :alt="photo.title"
+                      :class="[isSelectMode && selectedPhotos.includes(photo.id) ? 'brightness-75 p-2' : 'opacity-100', 'w-full h-full object-cover group-hover:opacity-75 transition-opacity'].join(' ')"
+                      width="100%"
+                      height="100%"
+                    />
                     <div v-if="!isSelectMode"
                       class="absolute inset-0 bg-black bg-opacity-0 transition-opacity flex items-center justify-center opacity-0 group-hover:opacity-100">
                       <div class="flex space-x-2">
@@ -142,69 +147,88 @@
               </div>
 
               <!-- 瀑布流视图 -->
-              <div v-else-if="currentView === 'masonry'" class="columns-2 sm:columns-3 md:columns-4 lg:columns-5 gap-4">
-                <div v-for="photo in item.photos" :key="photo.id"
-                  class="group relative photo-item mb-4 break-inside-avoid" :data-date="photo.taken_time"
-                  :data-photo-id="photo.id">
-                  <!-- 选择框 -->
-                  <div v-if="isSelectMode" class="absolute top-2 left-2 z-10">
-                    <input type="checkbox" v-model="selectedPhotos" :value="photo.id"
-                      class="w-5 h-5 text-primary-600 rounded border-gray-300 focus:ring-primary-500 checkbox">
-                  </div>
-                  <div class="bg-gray-200 rounded-lg overflow-hidden cursor-pointer"
-                    @click="isSelectMode && togglePhotoSelection(photo.id)">
-                    <img :src="photo.thumbnail_path" :alt="photo.title"
-                      :class="[isSelectMode && selectedPhotos.includes(photo.id) ? 'brightness-75 p-2' : 'opacity-100', 'w-full object-cover group-hover:opacity-75 transition-opacity']">
-                    <div v-if="!isSelectMode"
-                      class="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-opacity flex items-center justify-center opacity-0 group-hover:opacity-100">
-                      <div class="flex space-x-2">
-                        <button
-                          :class="['p-2 rounded-full', photo.is_favorite ? 'bg-primary-500 text-white' : 'bg-white text-gray-700 hover:text-gray-900']">
-                          <i class="fas fa-heart"></i>
-                        </button>
-                        <button @click.stop="handleEditPhoto(photo.id)"
-                          class="p-2 bg-white rounded-full text-gray-700 hover:text-gray-900">
-                          <i class="fas fa-edit"></i>
-                        </button>
-                        <button class="p-2 bg-white rounded-full text-gray-700 hover:text-gray-900">
-                          <i class="fas fa-share-alt"></i>
-                        </button>
+              <div v-else-if="currentView === 'masonry'">
+                <MasonryGrid 
+                  :items="item.photos" 
+                  :gap="16"
+                  :min-column-width="200"
+                >
+                  <template #default="{ item: photo }">
+                    <div class="group relative photo-item" 
+                      :data-date="photo.taken_time"
+                      :data-photo-id="photo.id">
+                      <!-- 选择框 -->
+                      <div v-if="isSelectMode" class="absolute top-2 left-2 z-10">
+                        <input type="checkbox" v-model="selectedPhotos" :value="Number(photo.id)"
+                          class="w-5 h-5 text-primary-600 rounded border-gray-300 focus:ring-primary-500 checkbox">
+                      </div>
+                      <div class="rounded-lg overflow-hidden cursor-pointer"
+                        @click="isSelectMode && togglePhotoSelection(Number(photo.id))">
+                        <LazyImage 
+                          :src="photo.thumbnail_path" 
+                          :alt="photo.title"
+                          :class="[isSelectMode && selectedPhotos.includes(Number(photo.id)) ? 'brightness-75 p-2' : 'opacity-100', 'w-full object-cover group-hover:opacity-75 transition-opacity'].join(' ')"
+                          width="100%"
+                        />
+                        <div v-if="!isSelectMode"
+                          class="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-opacity flex items-center justify-center opacity-0 group-hover:opacity-100">
+                          <div class="flex space-x-2">
+                            <button
+                              :class="['p-2 rounded-full', photo.is_favorite ? 'bg-primary-500 text-white' : 'bg-white text-gray-700 hover:text-gray-900']"
+                              @click="handleToggleFavorite(Number(photo.id))">
+                              <i class="fas fa-heart"></i>
+                            </button>
+                            <button @click.stop="handleEditPhoto(Number(photo.id))"
+                              class="p-2 bg-white rounded-full text-gray-700 hover:text-gray-900">
+                              <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="p-2 bg-white rounded-full text-gray-700 hover:text-gray-900">
+                              <i class="fas fa-share-alt"></i>
+                            </button>
+                          </div>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                </div>
+                  </template>
+                </MasonryGrid>
               </div>
 
               <!-- 列表视图 -->
-              <div v-else class="space-y-4">
+              <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
                 <div v-for="photo in (isGroupExpanded(item.date_key) ? item.photos : item.photos.slice(0, 5))"
                   :key="photo.id"
-                  class="flex items-center space-x-4 p-4 bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow">
+                  class="flex items-center space-x-3 p-3 bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow">
                   <!-- 选择框 -->
-                  <div v-if="isSelectMode" class="flex items-center space-x-2">
+                  <div v-if="isSelectMode" class="flex-shrink-0">
                     <input type="checkbox" v-model="selectedPhotos" :value="photo.id"
-                      class="w-5 h-5 text-primary-600 rounded border-gray-300 focus:ring-primary-500 checkbox">
+                      class="w-4 h-4 text-primary-600 rounded border-gray-300 focus:ring-primary-500 checkbox">
                   </div>
-                  <div class="w-24 h-24 flex-shrink-0 cursor-pointer photo-item" :data-photo-id="photo.id"
+                  <div class="w-16 h-16 flex-shrink-0 cursor-pointer photo-item" :data-photo-id="photo.id"
                     @click="isSelectMode && togglePhotoSelection(photo.id)">
-                    <img :src="photo.thumbnail_path" :alt="photo.title"
-                      :class="[isSelectMode && selectedPhotos.includes(photo.id) ? 'brightness-75' : 'opacity-100', 'w-full h-full object-cover rounded']">
+                    <LazyImage 
+                      :src="photo.thumbnail_path" 
+                      :alt="photo.title"
+                      :class="[isSelectMode && selectedPhotos.includes(photo.id) ? 'brightness-75' : 'opacity-100', 'w-full h-full object-cover rounded'].join(' ')"
+                      width="64px"
+                      height="64px"
+                    />
                   </div>
-                  <div class="flex-1">
-                    <h3 class="text-lg font-medium text-gray-900">{{ photo.title || '未命名照片' }}</h3>
-                    <p class="text-sm text-gray-500">{{ formatDate(photo.taken_time || new Date().toISOString()) }}</p>
+                  <div class="flex-1 min-w-0">
+                    <h3 class="text-sm font-medium text-gray-900 truncate">{{ photo.title || '未命名照片' }}</h3>
+                    <p class="text-xs text-gray-500 truncate">{{ formatDate(photo.taken_time || new Date().toISOString()) }}</p>
                   </div>
-                  <div class="flex items-center space-x-2">
+                  <div class="flex items-center space-x-1 flex-shrink-0">
                     <button
-                      :class="['p-2 rounded-full', photo.is_favorite ? 'bg-primary-500 text-white' : 'bg-gray-100 text-gray-700 hover:text-gray-900']">
-                      <i class="fas fa-heart"></i>
+                      :class="['p-1.5 rounded-full', photo.is_favorite ? 'bg-primary-500 text-white' : 'bg-gray-100 text-gray-700 hover:text-gray-900']"
+                      @click="handleToggleFavorite(photo.id)">
+                      <i class="fas fa-heart text-xs"></i>
                     </button>
                     <button @click.stop="handleEditPhoto(photo.id)"
-                      class="p-2 bg-gray-100 rounded-full text-gray-700 hover:text-gray-900">
-                      <i class="fas fa-edit"></i>
+                      class="p-1.5 bg-gray-100 rounded-full text-gray-700 hover:text-gray-900">
+                      <i class="fas fa-edit text-xs"></i>
                     </button>
-                    <button class="p-2 bg-gray-100 rounded-full text-gray-700 hover:text-gray-900">
-                      <i class="fas fa-share-alt"></i>
+                    <button class="p-1.5 bg-gray-100 rounded-full text-gray-700 hover:text-gray-900">
+                      <i class="fas fa-share-alt text-xs"></i>
                     </button>
                   </div>
                 </div>
@@ -254,8 +278,9 @@
 
 <script setup lang="ts">
 import { ref, onMounted, computed, watch, onUnmounted, onActivated, onDeactivated } from 'vue'
-import PhotoGrid from '@/components/PhotoGrid.vue'
-import { photoApi, type Photo, type PhotoListParams, type PhotoGroup } from '@/api/photos'
+import LazyImage from '@/components/LazyImage.vue'
+import MasonryGrid from '@/components/MasonryGrid.vue'
+import { photoApi, type PhotoListParams, type PhotoGroup } from '@/api/photos'
 import { albumApi, type Album } from '@/api/albums'
 import { useRouter } from 'vue-router'
 
@@ -429,32 +454,6 @@ const isGroupExpanded = (dateKey: string) => {
   return expandedGroups.value.has(dateKey)
 }
 
-// 判断是否显示年份标记
-const shouldShowYear = (dateKey: string, index: number) => {
-  if (index === 0) return true;
-  const currentYear = getYear(dateKey);
-  const prevYear = getYear(photos.value[index - 1].date_key);
-  return currentYear !== prevYear;
-}
-
-// 从日期字符串中提取年份
-const getYear = (dateKey: string) => {
-  return dateKey.split('-')[0];
-}
-
-// 格式化日期为年月格式
-const formatDateToYearMonth = (dateKey: string) => {
-  const date = new Date(dateKey)
-  return `${date.getFullYear()}年${date.getMonth() + 1}月`
-}
-
-// 滚动到指定月份
-const scrollToMonth = (dateKey: string) => {
-  const monthElement = document.getElementById(`month-${photos.value.findIndex(item => item.date_key === dateKey)}`)
-  if (monthElement) {
-    monthElement.scrollIntoView({ behavior: 'smooth', block: 'start' })
-  }
-}
 
 // 格式化日期
 const formatDate = (dateString: string) => {
