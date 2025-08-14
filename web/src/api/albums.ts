@@ -14,6 +14,17 @@ export interface Album {
   }
 }
 
+export interface SystemAlbum {
+  name: string
+  photos_count: number
+  type: string
+  cover_photo?: {
+    id: number
+    url: string
+    title?: string
+  }
+}
+
 export const albumApi = {
   // 获取相册列表
   getAlbums(): Promise<Album[]> {
@@ -63,5 +74,15 @@ export const albumApi = {
   // 从相册中移除照片
   removePhotoFromAlbum(albumId: number, photoId: number): Promise<void> {
     return api.delete(`/albums/${albumId}/photos/${photoId}`)
+  },
+
+  // 获取系统相册
+  getSystemAlbums(): Promise<SystemAlbum[]> {
+    return api.get('/system-albums').then(response => response.data)
+  },
+
+  // 获取系统相册中的照片
+  getSystemAlbumPhotos(albumType: string): Promise<any[]> {
+    return api.get(`/system-albums/${albumType}/photos`).then(response => response.data)
   }
 }

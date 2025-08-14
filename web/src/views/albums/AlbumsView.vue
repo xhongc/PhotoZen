@@ -11,58 +11,17 @@
         <div class="bg-base-100 rounded-lg shadow-sm p-4 mb-6">
           <h3 class="text-lg font-medium text-primary-600 mb-4">系统相册</h3>
           <div class="grid grid-cols-4 gap-4">
-            <!-- 最近添加 -->
-            <div class="relative group overflow-hidden rounded-lg shadow-sm">
+            <div class="relative group overflow-hidden rounded-lg shadow-sm cursor-pointer hover:shadow-lg transition-shadow duration-300" 
+                 v-for="systemAlbum in systemAlbums" :key="systemAlbum.name"
+                 @click="viewSystemAlbum(systemAlbum)">
               <div class="aspect-w-16 aspect-h-9 bg-gray-200">
-                <img src="https://images.unsplash.com/photo-1501555088652-021faa106b9b?q=80&w=1473&auto=format&fit=crop"
-                  alt="最近添加" class="w-full h-40 2xl:h-60 object-cover">
+                <img :src="systemAlbum.cover_photo?.url || getDefaultCoverForSystemAlbum(systemAlbum.type)"
+                  :alt="systemAlbum.name" class="w-full h-40 2xl:h-60 object-cover">
                 <div class="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-60">
                 </div>
                 <div class="absolute inset-x-0 bottom-0 p-4">
-                  <h4 class="text-white font-medium">最近添加</h4>
-                  <p class="text-gray-200 text-sm">108 张照片</p>
-                </div>
-              </div>
-            </div>
-
-            <!-- 收藏 -->
-            <div class="relative group overflow-hidden rounded-lg shadow-sm">
-              <div class="aspect-w-16 aspect-h-9 bg-gray-200">
-                <img src="https://images.unsplash.com/photo-1501555088652-021faa106b9b?q=80&w=1473&auto=format&fit=crop"
-                  alt="收藏" class="w-full h-40 2xl:h-60 object-cover">
-                <div class="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-60">
-                </div>
-                <div class="absolute inset-x-0 bottom-0 p-4">
-                  <h4 class="text-white font-medium">收藏</h4>
-                  <p class="text-gray-200 text-sm">24 张照片</p>
-                </div>
-              </div>
-            </div>
-
-            <!-- 人物 -->
-            <div class="relative group overflow-hidden rounded-lg shadow-sm">
-              <div class="aspect-w-16 aspect-h-9 bg-gray-200">
-                <img src="https://images.unsplash.com/photo-1501555088652-021faa106b9b?q=80&w=1473&auto=format&fit=crop"
-                  alt="人物" class="w-full h-40 2xl:h-60 object-cover">
-                <div class="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-60">
-                </div>
-                <div class="absolute inset-x-0 bottom-0 p-4">
-                  <h4 class="text-white font-medium">人物</h4>
-                  <p class="text-gray-200 text-sm">56 张照片</p>
-                </div>
-              </div>
-            </div>
-
-            <!-- 地点 -->
-            <div class="relative group overflow-hidden rounded-lg shadow-sm">
-              <div class="aspect-w-16 aspect-h-9 bg-gray-200">
-                <img src="https://images.unsplash.com/photo-1501555088652-021faa106b9b?q=80&w=1473&auto=format&fit=crop"
-                  alt="地点" class="w-full h-40 2xl:h-60 object-cover">
-                <div class="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-60">
-                </div>
-                <div class="absolute inset-x-0 bottom-0 p-4">
-                  <h4 class="text-white font-medium">地点</h4>
-                  <p class="text-gray-200 text-sm">12 个地点</p>
+                  <h4 class="text-white font-medium">{{ systemAlbum.name }}</h4>
+                  <p class="text-gray-200 text-sm">{{ systemAlbum.photos_count }} {{ getCountText(systemAlbum) }}</p>
                 </div>
               </div>
             </div>
@@ -75,8 +34,8 @@
             <div class="relative group overflow-hidden rounded-lg shadow-sm" v-for="album in albums" :key="album.id"
               @click="viewAlbum(album)">
               <div class="aspect-w-16 aspect-h-9 bg-gray-200">
-                <img src="https://images.unsplash.com/photo-1501555088652-021faa106b9b?q=80&w=1473&auto=format&fit=crop"
-                  alt="旅行" class="w-full h-40 2xl:h-60 object-cover">
+                <img :src="album.cover_photo?.url || 'https://images.unsplash.com/photo-1501555088652-021faa106b9b?q=80&w=1473&auto=format&fit=crop'"
+                  :alt="album.name" class="w-full h-40 2xl:h-60 object-cover">
                 <div class="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-60">
                 </div>
                 <div class="absolute inset-x-0 bottom-0 p-4">
@@ -135,10 +94,11 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { albumApi, type Album } from '@/api/albums'
+import { albumApi, type Album, type SystemAlbum } from '@/api/albums'
 
 const router = useRouter()
 const albums = ref<Album[]>([])
+const systemAlbums = ref<SystemAlbum[]>([])
 const loading = ref(true)
 const error = ref('')
 const createAlbumDialog = ref<HTMLDialogElement | null>(null)
@@ -151,6 +111,7 @@ const newAlbum = ref({
 
 onMounted(() => {
   fetchAlbums()
+  fetchSystemAlbums()
 })
 
 
@@ -163,6 +124,14 @@ const fetchAlbums = async () => {
     error.value = e instanceof Error ? e.message : '获取相册失败'
   } finally {
     loading.value = false
+  }
+}
+
+const fetchSystemAlbums = async () => {
+  try {
+    systemAlbums.value = await albumApi.getSystemAlbums()
+  } catch (e) {
+    console.error('获取系统相册失败:', e)
   }
 }
 
@@ -200,6 +169,39 @@ const viewAlbum = (album: Album) => {
 const handleAlbumMenu = (album: Album) => {
   // TODO: 实现相册菜单功能
   console.log('相册菜单:', album)
+}
+
+const viewSystemAlbum = (systemAlbum: SystemAlbum) => {
+  // 暂时跳转到一般照片页面，后续可以扩展为专门的系统相册详情页
+  router.push('/photos')
+  console.log('查看系统相册:', systemAlbum.name, systemAlbum.type)
+}
+
+const getDefaultCoverForSystemAlbum = (type: string) => {
+  const defaultCovers = {
+    'recent': 'https://images.unsplash.com/photo-1501555088652-021faa106b9b?q=80&w=1473&auto=format&fit=crop',
+    'favorite': 'https://images.unsplash.com/photo-1516627145497-ae4292b4da96?q=80&w=1470&auto=format&fit=crop',
+    'this_year': 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?q=80&w=1470&auto=format&fit=crop',
+    'screenshots': 'https://images.unsplash.com/photo-1551650975-87deedd944c3?q=80&w=1474&auto=format&fit=crop',
+    'selfies': 'https://images.unsplash.com/photo-1554774853-aae0a22c8aa4?q=80&w=1470&auto=format&fit=crop',
+    'videos': 'https://images.unsplash.com/photo-1574717024653-61fd2cf4d44d?q=80&w=1470&auto=format&fit=crop',
+    'people': 'https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?q=80&w=1470&auto=format&fit=crop',
+    'places': 'https://images.unsplash.com/photo-1488646953014-85cb44e25828?q=80&w=1435&auto=format&fit=crop'
+  }
+  return defaultCovers[type as keyof typeof defaultCovers] || 'https://images.unsplash.com/photo-1501555088652-021faa106b9b?q=80&w=1473&auto=format&fit=crop'
+}
+
+const getCountText = (systemAlbum: SystemAlbum) => {
+  switch (systemAlbum.type) {
+    case 'places':
+      return '个地点'
+    case 'people':
+      return '个人物'
+    case 'videos':
+      return '个视频'
+    default:
+      return '张照片'
+  }
 }
 
 </script>

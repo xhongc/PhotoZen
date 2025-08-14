@@ -61,44 +61,44 @@
               <i class="fas fa-folder-plus mr-2"></i>
               新建文件夹
             </button>
-            <button @click="handleCreateDirectory"
+            <button @click="handleScanLibrary"
               class="inline-flex items-center px-3 py-1.5 text-sm font-medium text-primary-700 hover:bg-gray-100 rounded">
-              <i class="fas fa-folder-plus mr-2"></i>
+              <i class="fas fa-search mr-2"></i>
               扫描入库
             </button>
-            <button @click="handleCreateDirectory"
+            <button @click="handleGenerateThumbnails"
               class="inline-flex items-center px-3 py-1.5 text-sm font-medium text-primary-700 hover:bg-gray-100 rounded">
-              <i class="fas fa-folder-plus mr-2"></i>
+              <i class="fas fa-image mr-2"></i>
               生成缩略图
             </button>
-            <button @click="handleCreateDirectory"
+            <button @click="handleCheckDuplicates"
               class="inline-flex items-center px-3 py-1.5 text-sm font-medium text-primary-700 hover:bg-gray-100 rounded">
-              <i class="fas fa-folder-plus mr-2"></i>
+              <i class="fas fa-copy mr-2"></i>
               重复检查
             </button>
-            <button @click="handleCreateDirectory"
+            <button @click="handleBackupUpload"
               class="inline-flex items-center px-3 py-1.5 text-sm font-medium text-primary-700 hover:bg-gray-100 rounded">
-              <i class="fas fa-folder-plus mr-2"></i>
+              <i class="fas fa-cloud-upload-alt mr-2"></i>
               备份上传
             </button>
-            <button @click="handleCreateDirectory"
+            <button @click="handleFaceRecognition"
               class="inline-flex items-center px-3 py-1.5 text-sm font-medium text-primary-700 hover:bg-gray-100 rounded">
-              <i class="fas fa-folder-plus mr-2"></i>
+              <i class="fas fa-user mr-2"></i>
               人像识别
             </button>
-            <button @click="handleCreateDirectory"
+            <button @click="handleClipAnalysis"
               class="inline-flex items-center px-3 py-1.5 text-sm font-medium text-primary-700 hover:bg-gray-100 rounded">
-              <i class="fas fa-folder-plus mr-2"></i>
+              <i class="fas fa-brain mr-2"></i>
               CLIP识别
             </button>
-            <button @click="handleCreateDirectory"
+            <button @click="handleOcrAnalysis"
               class="inline-flex items-center px-3 py-1.5 text-sm font-medium text-primary-700 hover:bg-gray-100 rounded">
-              <i class="fas fa-folder-plus mr-2"></i>
+              <i class="fas fa-text-height mr-2"></i>
               OCR识别
             </button>
-            <button @click="handleCreateDirectory"
+            <button @click="handleVideoTranscode"
               class="inline-flex items-center px-3 py-1.5 text-sm font-medium text-primary-700 hover:bg-gray-100 rounded">
-              <i class="fas fa-folder-plus mr-2"></i>
+              <i class="fas fa-video mr-2"></i>
               视频转码
             </button>
           </div>
@@ -126,6 +126,60 @@
         </div>
         <div class="w-full bg-neutral bg-opacity-20 rounded-full h-1.5 mt-1">
           <div class="bg-primary h-1.5 rounded-full" :style="{ width: `${uploadProgress}%` }"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 任务进度条 -->
+    <div v-if="isProcessing" class="fixed bottom-0 left-0 right-0 p-4 bg-white shadow-lg border-t">
+      <div class="max-w-4xl mx-auto">
+        <div class="flex items-center justify-between mb-2">
+          <div class="flex items-center">
+            <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-primary mr-2"></div>
+            <span class="text-sm font-medium">{{ taskMessage || '正在处理...' }}</span>
+          </div>
+          <div class="flex items-center">
+            <span class="text-sm text-gray-500 mr-2">{{ taskProgress }}%</span>
+            <button @click="isProcessing = false" class="text-gray-400 hover:text-gray-600">
+              <i class="fas fa-times"></i>
+            </button>
+          </div>
+        </div>
+        <div class="w-full bg-gray-200 rounded-full h-2">
+          <div class="bg-primary h-2 rounded-full transition-all duration-300" 
+               :style="{ width: `${taskProgress}%` }"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 任务结果弹窗 -->
+    <div v-if="taskResults && taskResults.duplicate_groups" 
+         class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div class="bg-white rounded-lg p-6 max-w-2xl w-full max-h-96 overflow-y-auto">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="text-lg font-semibold">重复文件检查结果</h3>
+          <button @click="taskResults = null" class="text-gray-400 hover:text-gray-600">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        <div class="space-y-4">
+          <div v-for="(group, index) in taskResults.duplicate_groups" :key="index" 
+               class="border rounded-lg p-3">
+            <div class="text-sm font-medium text-gray-700 mb-2">
+              原始文件: {{ group.original }}
+            </div>
+            <div class="text-xs text-gray-500 mb-1">
+              文件大小: {{ formatFileSize(group.size) }}
+            </div>
+            <div class="text-xs text-red-600">
+              重复文件 ({{ group.duplicates.length }}个):
+            </div>
+            <ul class="text-xs text-gray-600 ml-4">
+              <li v-for="duplicate in group.duplicates" :key="duplicate">
+                {{ duplicate }}
+              </li>
+            </ul>
+          </div>
         </div>
       </div>
     </div>
@@ -236,7 +290,18 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
 import { webdavApi, type WebDAVFile } from '@/api/webdav'
-import { fileApi } from '@/api/file'
+import { 
+  fileApi, 
+  type ScanLibraryRequest,
+  type GenerateThumbnailsRequest,
+  type CheckDuplicatesRequest,
+  type BackupUploadRequest,
+  type FaceRecognitionRequest,
+  type ClipAnalysisRequest,
+  type OcrAnalysisRequest,
+  type VideoTranscodeRequest,
+  type TaskStatusResponse
+} from '@/api/file'
 import { useRouter } from 'vue-router'
 import ImagePreview from '@/components/ImagePreview.vue'
 import notify from '@/components/notify'
@@ -264,6 +329,13 @@ const viewMode = ref<'list' | 'grid'>('list')
 const searchQuery = ref('')
 const uploadProgress = ref(0)
 const isUploading = ref(false)
+
+// 工具栏功能状态管理
+const currentTask = ref<string | null>(null)
+const taskProgress = ref(0)
+const taskMessage = ref('')
+const isProcessing = ref(false)
+const taskResults = ref<any>(null)
 
 // 添加当前预览图片的路径
 const currentPreviewPath = ref('')
@@ -550,6 +622,309 @@ const handlePreviewClose = () => {
     const filePath = currentImagePath.replace('http://127.0.0.1:8000/api/fsdav/', '')
     currentPreviewPath.value = filePath
     scrollToFile(filePath)
+  }
+}
+
+// =============工具栏功能处理方法=============
+
+// 通用任务状态监控
+const monitorTask = async (taskId: string) => {
+  currentTask.value = taskId
+  isProcessing.value = true
+  
+  const checkStatus = async () => {
+    try {
+      const response = await fileApi.getTaskStatus(taskId)
+      const status = response.data
+      
+      taskProgress.value = status.progress
+      taskMessage.value = status.message || ''
+      
+      if (status.status === 'completed') {
+        taskResults.value = status.result
+        isProcessing.value = false
+        notify.myMsg.notify({
+          title: '任务完成',
+          content: status.message || '操作已完成',
+          type: 'success',
+          time: 3000
+        })
+      } else if (status.status === 'failed') {
+        isProcessing.value = false
+        notify.myMsg.notify({
+          title: '任务失败',
+          content: status.message || '操作失败',
+          type: 'error',
+          time: 4000
+        })
+      } else {
+        // 继续监控
+        setTimeout(checkStatus, 2000)
+      }
+    } catch (error) {
+      console.error('监控任务状态失败:', error)
+      isProcessing.value = false
+    }
+  }
+  
+  checkStatus()
+}
+
+// 扫描入库
+const handleScanLibrary = async () => {
+  try {
+    const response = await fileApi.scanLibrary({
+      path: currentPath.value,
+      recursive: true
+    })
+    
+    const result = response.data
+    
+    if (result.task_id) {
+      monitorTask(result.task_id)
+    }
+    
+    notify.myMsg.notify({
+      title: '扫描入库',
+      content: `发现 ${result.processed} 张图片，导入 ${result.imported} 张`,
+      type: 'success',
+      time: 3000
+    })
+    
+    if (result.errors.length > 0) {
+      console.error('扫描错误:', result.errors)
+    }
+    
+  } catch (error: any) {
+    notify.myMsg.notify({
+      title: '扫描失败',
+      content: error.response?.data?.message || '扫描入库操作失败',
+      type: 'error',
+      time: 4000
+    })
+  }
+}
+
+// 生成缩略图
+const handleGenerateThumbnails = async () => {
+  try {
+    const response = await fileApi.generateThumbnails({
+      path: currentPath.value,
+      sizes: [200, 400, 800]
+    })
+    
+    const result = response.data
+    
+    if (result.task_id) {
+      monitorTask(result.task_id)
+    }
+    
+    notify.myMsg.notify({
+      title: '生成缩略图',
+      content: `生成 ${result.generated} 个，跳过 ${result.skipped} 个`,
+      type: 'success',
+      time: 3000
+    })
+    
+  } catch (error: any) {
+    notify.myMsg.notify({
+      title: '生成失败',
+      content: error.response?.data?.message || '生成缩略图失败',
+      type: 'error',
+      time: 4000
+    })
+  }
+}
+
+// 重复检查
+const handleCheckDuplicates = async () => {
+  try {
+    const response = await fileApi.checkDuplicates({
+      path: currentPath.value
+    })
+    
+    const result = response.data
+    
+    notify.myMsg.notify({
+      title: '重复检查',
+      content: `发现 ${result.total_duplicates} 个重复文件，可节省 ${formatFileSize(result.space_saved)} 空间`,
+      type: 'success',
+      time: 5000
+    })
+    
+    // 这里可以显示详细的重复文件列表
+    taskResults.value = result
+    
+  } catch (error: any) {
+    notify.myMsg.notify({
+      title: '检查失败',
+      content: error.response?.data?.message || '重复检查失败',
+      type: 'error',
+      time: 4000
+    })
+  }
+}
+
+// 备份上传
+const handleBackupUpload = async () => {
+  const destination = prompt('请输入备份目标路径:')
+  if (!destination) return
+  
+  try {
+    const response = await fileApi.backupUpload({
+      source: currentPath.value,
+      destination: destination,
+      compression: true
+    })
+    
+    const result = response.data
+    
+    if (result.task_id) {
+      monitorTask(result.task_id)
+    }
+    
+    notify.myMsg.notify({
+      title: '备份上传',
+      content: `备份任务已启动，预估大小: ${formatFileSize(result.estimated_size || 0)}`,
+      type: 'success',
+      time: 3000
+    })
+    
+  } catch (error: any) {
+    notify.myMsg.notify({
+      title: '备份失败',
+      content: error.response?.data?.message || '备份上传失败',
+      type: 'error',
+      time: 4000
+    })
+  }
+}
+
+// 人像识别
+const handleFaceRecognition = async () => {
+  try {
+    const response = await fileApi.faceRecognition({
+      path: currentPath.value,
+      create_albums: true
+    })
+    
+    const result = response.data
+    
+    if (result.task_id) {
+      monitorTask(result.task_id)
+    }
+    
+    notify.myMsg.notify({
+      title: '人像识别',
+      content: `检测到 ${result.faces_detected} 张人脸，识别出 ${result.persons.length} 个人物`,
+      type: 'success',
+      time: 4000
+    })
+    
+  } catch (error: any) {
+    notify.myMsg.notify({
+      title: '识别失败',
+      content: error.response?.data?.message || '人像识别失败',
+      type: 'error',
+      time: 4000
+    })
+  }
+}
+
+// CLIP识别
+const handleClipAnalysis = async () => {
+  try {
+    const response = await fileApi.clipAnalysis({
+      path: currentPath.value,
+      confidence_threshold: 0.5
+    })
+    
+    const result = response.data
+    
+    if (result.task_id) {
+      monitorTask(result.task_id)
+    }
+    
+    notify.myMsg.notify({
+      title: 'CLIP识别',
+      content: `识别出标签: ${result.tags.join(', ')}`,
+      type: 'success',
+      time: 4000
+    })
+    
+  } catch (error: any) {
+    notify.myMsg.notify({
+      title: '识别失败',
+      content: error.response?.data?.message || 'CLIP识别失败',
+      type: 'error',
+      time: 4000
+    })
+  }
+}
+
+// OCR识别
+const handleOcrAnalysis = async () => {
+  try {
+    const response = await fileApi.ocrAnalysis({
+      path: currentPath.value,
+      language: 'zh'
+    })
+    
+    const result = response.data
+    
+    if (result.task_id) {
+      monitorTask(result.task_id)
+    }
+    
+    notify.myMsg.notify({
+      title: 'OCR识别',
+      content: `识别文字: ${result.text.substring(0, 50)}...`,
+      type: 'success',
+      time: 4000
+    })
+    
+  } catch (error: any) {
+    notify.myMsg.notify({
+      title: '识别失败',
+      content: error.response?.data?.message || 'OCR识别失败',
+      type: 'error',
+      time: 4000
+    })
+  }
+}
+
+// 视频转码
+const handleVideoTranscode = async () => {
+  const format = prompt('请输入目标格式 (mp4/avi/mkv):', 'mp4')
+  if (!format) return
+  
+  try {
+    const response = await fileApi.videoTranscode({
+      path: currentPath.value,
+      format: format,
+      quality: 'medium'
+    })
+    
+    const result = response.data
+    
+    if (result.task_id) {
+      monitorTask(result.task_id)
+    }
+    
+    notify.myMsg.notify({
+      title: '视频转码',
+      content: `转码任务已启动，预估时间: ${result.estimated_time || 0} 分钟`,
+      type: 'success',
+      time: 3000
+    })
+    
+  } catch (error: any) {
+    notify.myMsg.notify({
+      title: '转码失败',
+      content: error.response?.data?.message || '视频转码失败',
+      type: 'error',
+      time: 4000
+    })
   }
 }
 

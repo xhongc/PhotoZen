@@ -19,6 +19,20 @@
             "justMyCode": false
         },
         {
+            "name": "Vue Frontend",
+            "type": "node-terminal",
+            "request": "launch",
+            "command": "npm run dev",
+            "cwd": "${workspaceFolder}/web"
+        },
+        {
+            "name": "Tailwind CSS Watch",
+            "type": "node-terminal",
+            "request": "launch",
+            "command": "npx tailwindcss -i ./src/input.css -o ./src/output.css --watch",
+            "cwd": "${workspaceFolder}/web"
+        },
+        {
             "name": "Django Shell Plus",
             "type": "debugpy",
             "request": "launch",
@@ -26,6 +40,22 @@
             "args": [
                 "shell_plus",
             ]
+        }
+    ],
+    "compounds": [
+        {
+            "name": "启动所有服务",
+            "configurations": [
+                "PhotoZen",
+                "Vue Frontend", 
+                "Tailwind CSS Watch",
+            ],
+            "presentation": {
+                "hidden": false,
+                "group": "",
+                "order": 1
+            },
+            "stopAll": true
         }
     ]
 }

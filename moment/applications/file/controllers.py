@@ -16,6 +16,10 @@ import shutil
 from pathlib import Path
 import PIL.Image
 import io
+import hashlib
+import uuid
+from concurrent.futures import ThreadPoolExecutor
+import time
 
 from moment.schema import SuccessResponse
 from applications.file.models import RecycleItem as DBRecycleItem
@@ -86,6 +90,98 @@ class RecycleListResponse(BaseModel):
 
 class BatchOperationSchema(BaseModel):
     paths: List[str]
+
+# 工具栏功能相关的Schema定义
+class ScanLibrarySchema(BaseModel):
+    path: str
+    recursive: bool = True
+
+class ScanLibraryResponse(BaseModel):
+    processed: int
+    imported: int
+    errors: List[str]
+    task_id: Optional[str] = None
+
+class GenerateThumbnailsSchema(BaseModel):
+    path: str
+    sizes: List[int] = [200, 400, 800]
+
+class GenerateThumbnailsResponse(BaseModel):
+    generated: int
+    skipped: int
+    errors: List[str]
+    task_id: Optional[str] = None
+
+class CheckDuplicatesSchema(BaseModel):
+    path: str
+
+class DuplicateGroup(BaseModel):
+    original: str
+    duplicates: List[str]
+    size: int
+
+class CheckDuplicatesResponse(BaseModel):
+    duplicate_groups: List[DuplicateGroup]
+    total_duplicates: int
+    space_saved: int
+
+class BackupUploadSchema(BaseModel):
+    source: str
+    destination: str
+    compression: bool = True
+
+class BackupUploadResponse(BaseModel):
+    task_id: str
+    status: str
+    estimated_size: Optional[int] = None
+
+class FaceRecognitionSchema(BaseModel):
+    path: str
+    create_albums: bool = True
+
+class FaceRecognitionResponse(BaseModel):
+    faces_detected: int
+    persons: List[str]
+    photos_processed: int
+    task_id: Optional[str] = None
+
+class ClipAnalysisSchema(BaseModel):
+    path: str
+    confidence_threshold: float = 0.5
+
+class ClipAnalysisResponse(BaseModel):
+    tags: List[str]
+    confidence_scores: List[float]
+    photos_processed: int
+    task_id: Optional[str] = None
+
+class OcrAnalysisSchema(BaseModel):
+    path: str
+    language: str = 'zh'
+
+class OcrAnalysisResponse(BaseModel):
+    text: str
+    confidence: float
+    photos_processed: int
+    task_id: Optional[str] = None
+
+class VideoTranscodeSchema(BaseModel):
+    path: str
+    format: str = 'mp4'
+    quality: str = 'medium'  # low, medium, high
+    resolution: Optional[str] = None  # 720p, 1080p
+
+class VideoTranscodeResponse(BaseModel):
+    task_id: str
+    output_path: str
+    estimated_time: Optional[int] = None
+
+class TaskStatusResponse(BaseModel):
+    task_id: str
+    status: str  # pending, running, completed, failed
+    progress: int  # 0-100
+    message: Optional[str] = None
+    result: Optional[dict] = None
 
 @api_controller("/files", auth=JWTAuth(), permissions=[IsAuthenticated])
 class FileController(ControllerBase):
@@ -530,3 +626,372 @@ class FileController(ControllerBase):
                 "msg": str(e),
                 "result": False
             }
+
+    # =============工具栏功能 API 方法=============
+    
+    def calculate_file_hash(self, file_path: str) -> str:
+        """计算文件MD5哈希值"""
+        hash_md5 = hashlib.md5()
+        try:
+            with open(file_path, "rb") as f:
+                for chunk in iter(lambda: f.read(4096), b""):
+                    hash_md5.update(chunk)
+            return hash_md5.hexdigest()
+        except Exception:
+            return ""
+    
+    def get_image_files(self, directory: str, recursive: bool = True) -> List[str]:
+        """获取目录下的所有图片文件"""
+        image_extensions = {'.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.tiff'}
+        image_files = []
+        
+        if recursive:
+            for root, dirs, files in os.walk(directory):
+                for file in files:
+                    if os.path.splitext(file)[1].lower() in image_extensions:
+                        image_files.append(os.path.join(root, file))
+        else:
+            try:
+                for file in os.listdir(directory):
+                    if os.path.isfile(os.path.join(directory, file)):
+                        if os.path.splitext(file)[1].lower() in image_extensions:
+                            image_files.append(os.path.join(directory, file))
+            except Exception:
+                pass
+        
+        return image_files
+
+    @route.post("/scan-library", response=ScanLibraryResponse)
+    def scan_library(self, data: ScanLibrarySchema):
+        """扫描目录并导入图片到照片库"""
+        try:
+            # 构建完整路径
+            full_path = os.path.join(settings.MEDIA_ROOT, data.path.strip("/"))
+            
+            if not os.path.exists(full_path):
+                return ScanLibraryResponse(
+                    processed=0,
+                    imported=0,
+                    errors=["目录不存在"]
+                )
+            
+            # 获取所有图片文件
+            image_files = self.get_image_files(full_path, data.recursive)
+            
+            # 模拟处理 - 这里应该调用照片导入逻辑
+            processed = len(image_files)
+            imported = processed  # 简化处理，实际应该检查是否已存在
+            
+            # 生成任务ID用于后续跟踪
+            task_id = str(uuid.uuid4())
+            
+            return ScanLibraryResponse(
+                processed=processed,
+                imported=imported,
+                errors=[],
+                task_id=task_id
+            )
+            
+        except Exception as e:
+            return ScanLibraryResponse(
+                processed=0,
+                imported=0,
+                errors=[str(e)]
+            )
+
+    @route.post("/generate-thumbnails", response=GenerateThumbnailsResponse)
+    def generate_thumbnails(self, data: GenerateThumbnailsSchema):
+        """为指定目录的图片生成缩略图"""
+        try:
+            full_path = os.path.join(settings.MEDIA_ROOT, data.path.strip("/"))
+            
+            if not os.path.exists(full_path):
+                return GenerateThumbnailsResponse(
+                    generated=0,
+                    skipped=0,
+                    errors=["目录不存在"]
+                )
+            
+            image_files = self.get_image_files(full_path, True)
+            generated = 0
+            skipped = 0
+            errors = []
+            
+            for image_file in image_files:
+                try:
+                    # 检查是否已有缩略图
+                    thumb_exists = any(
+                        os.path.exists(f"{image_file}_{size}x{size}.jpg")
+                        for size in data.sizes
+                    )
+                    
+                    if thumb_exists:
+                        skipped += 1
+                        continue
+                    
+                    # 生成缩略图
+                    self.process_image(image_file)
+                    generated += 1
+                    
+                except Exception as e:
+                    errors.append(f"{image_file}: {str(e)}")
+            
+            task_id = str(uuid.uuid4())
+            
+            return GenerateThumbnailsResponse(
+                generated=generated,
+                skipped=skipped,
+                errors=errors,
+                task_id=task_id
+            )
+            
+        except Exception as e:
+            return GenerateThumbnailsResponse(
+                generated=0,
+                skipped=0,
+                errors=[str(e)]
+            )
+
+    @route.post("/check-duplicates", response=CheckDuplicatesResponse)
+    def check_duplicates(self, data: CheckDuplicatesSchema):
+        """检查重复文件"""
+        try:
+            full_path = os.path.join(settings.MEDIA_ROOT, data.path.strip("/"))
+            
+            if not os.path.exists(full_path):
+                return CheckDuplicatesResponse(
+                    duplicate_groups=[],
+                    total_duplicates=0,
+                    space_saved=0
+                )
+            
+            # 获取所有图片文件并计算哈希值
+            image_files = self.get_image_files(full_path, True)
+            file_hashes = {}
+            
+            for image_file in image_files:
+                try:
+                    file_hash = self.calculate_file_hash(image_file)
+                    if file_hash:
+                        if file_hash not in file_hashes:
+                            file_hashes[file_hash] = []
+                        file_hashes[file_hash].append(image_file)
+                except Exception:
+                    continue
+            
+            # 找出重复文件组
+            duplicate_groups = []
+            total_duplicates = 0
+            space_saved = 0
+            
+            for file_hash, files in file_hashes.items():
+                if len(files) > 1:
+                    # 按修改时间排序，最早的作为原始文件
+                    files.sort(key=lambda x: os.path.getmtime(x))
+                    original = files[0]
+                    duplicates = files[1:]
+                    
+                    # 计算可节省的空间
+                    file_size = os.path.getsize(original)
+                    space_saved += file_size * len(duplicates)
+                    total_duplicates += len(duplicates)
+                    
+                    duplicate_groups.append(DuplicateGroup(
+                        original=original,
+                        duplicates=duplicates,
+                        size=file_size
+                    ))
+            
+            return CheckDuplicatesResponse(
+                duplicate_groups=duplicate_groups,
+                total_duplicates=total_duplicates,
+                space_saved=space_saved
+            )
+            
+        except Exception as e:
+            return CheckDuplicatesResponse(
+                duplicate_groups=[],
+                total_duplicates=0,
+                space_saved=0
+            )
+
+    @route.post("/backup-upload", response=BackupUploadResponse)
+    def backup_upload(self, data: BackupUploadSchema):
+        """启动备份上传任务"""
+        try:
+            source_path = os.path.join(settings.MEDIA_ROOT, data.source.strip("/"))
+            
+            if not os.path.exists(source_path):
+                raise ValueError("源目录不存在")
+            
+            # 计算预估大小
+            estimated_size = 0
+            for root, dirs, files in os.walk(source_path):
+                for file in files:
+                    estimated_size += os.path.getsize(os.path.join(root, file))
+            
+            # 生成任务ID
+            task_id = str(uuid.uuid4())
+            
+            # 这里应该启动后台任务进行实际备份
+            # 暂时返回模拟响应
+            
+            return BackupUploadResponse(
+                task_id=task_id,
+                status="pending",
+                estimated_size=estimated_size
+            )
+            
+        except Exception as e:
+            raise ValueError(str(e))
+
+    @route.post("/face-recognition", response=FaceRecognitionResponse)
+    def face_recognition(self, data: FaceRecognitionSchema):
+        """人脸识别功能"""
+        try:
+            full_path = os.path.join(settings.MEDIA_ROOT, data.path.strip("/"))
+            
+            if not os.path.exists(full_path):
+                return FaceRecognitionResponse(
+                    faces_detected=0,
+                    persons=[],
+                    photos_processed=0
+                )
+            
+            image_files = self.get_image_files(full_path, True)
+            
+            # 模拟人脸识别结果
+            faces_detected = len(image_files) * 2  # 假设每张照片平均2张脸
+            persons = ["Person_1", "Person_2", "Person_3"]  # 模拟识别出的人物
+            
+            task_id = str(uuid.uuid4())
+            
+            return FaceRecognitionResponse(
+                faces_detected=faces_detected,
+                persons=persons,
+                photos_processed=len(image_files),
+                task_id=task_id
+            )
+            
+        except Exception as e:
+            return FaceRecognitionResponse(
+                faces_detected=0,
+                persons=[],
+                photos_processed=0
+            )
+
+    @route.post("/clip-analysis", response=ClipAnalysisResponse)
+    def clip_analysis(self, data: ClipAnalysisSchema):
+        """CLIP模型图像内容分析"""
+        try:
+            full_path = os.path.join(settings.MEDIA_ROOT, data.path.strip("/"))
+            
+            if not os.path.exists(full_path):
+                return ClipAnalysisResponse(
+                    tags=[],
+                    confidence_scores=[],
+                    photos_processed=0
+                )
+            
+            image_files = self.get_image_files(full_path, True)
+            
+            # 模拟CLIP分析结果
+            tags = ["风景", "人物", "建筑", "动物", "食物"]
+            confidence_scores = [0.8, 0.7, 0.6, 0.5, 0.4]
+            
+            task_id = str(uuid.uuid4())
+            
+            return ClipAnalysisResponse(
+                tags=tags,
+                confidence_scores=confidence_scores,
+                photos_processed=len(image_files),
+                task_id=task_id
+            )
+            
+        except Exception as e:
+            return ClipAnalysisResponse(
+                tags=[],
+                confidence_scores=[],
+                photos_processed=0
+            )
+
+    @route.post("/ocr-analysis", response=OcrAnalysisResponse)
+    def ocr_analysis(self, data: OcrAnalysisSchema):
+        """OCR文字识别功能"""
+        try:
+            full_path = os.path.join(settings.MEDIA_ROOT, data.path.strip("/"))
+            
+            if not os.path.exists(full_path):
+                return OcrAnalysisResponse(
+                    text="",
+                    confidence=0.0,
+                    photos_processed=0
+                )
+            
+            image_files = self.get_image_files(full_path, True)
+            
+            # 模拟OCR识别结果
+            detected_text = "这是一些从图片中识别出的示例文字内容"
+            confidence = 0.85
+            
+            task_id = str(uuid.uuid4())
+            
+            return OcrAnalysisResponse(
+                text=detected_text,
+                confidence=confidence,
+                photos_processed=len(image_files),
+                task_id=task_id
+            )
+            
+        except Exception as e:
+            return OcrAnalysisResponse(
+                text="",
+                confidence=0.0,
+                photos_processed=0
+            )
+
+    @route.post("/video-transcode", response=VideoTranscodeResponse)
+    def video_transcode(self, data: VideoTranscodeSchema):
+        """视频转码功能"""
+        try:
+            full_path = os.path.join(settings.MEDIA_ROOT, data.path.strip("/"))
+            
+            if not os.path.exists(full_path):
+                raise ValueError("视频文件不存在")
+            
+            # 生成输出文件路径
+            base_name = os.path.splitext(full_path)[0]
+            output_path = f"{base_name}_transcoded.{data.format}"
+            
+            # 估算转码时间(基于文件大小)
+            file_size = os.path.getsize(full_path)
+            estimated_time = file_size // (1024 * 1024 * 10)  # 假设每10MB需要1分钟
+            
+            task_id = str(uuid.uuid4())
+            
+            return VideoTranscodeResponse(
+                task_id=task_id,
+                output_path=output_path,
+                estimated_time=estimated_time
+            )
+            
+        except Exception as e:
+            raise ValueError(str(e))
+
+    @route.get("/task-status/{task_id}", response=TaskStatusResponse)
+    def get_task_status(self, task_id: str):
+        """获取任务状态"""
+        # 这里应该从任务队列或数据库查询实际状态
+        # 暂时返回模拟数据
+        import random
+        
+        statuses = ["pending", "running", "completed"]
+        status = random.choice(statuses)
+        progress = random.randint(0, 100) if status == "running" else (100 if status == "completed" else 0)
+        
+        return TaskStatusResponse(
+            task_id=task_id,
+            status=status,
+            progress=progress,
+            message=f"任务 {task_id} 当前状态: {status}"
+        )
