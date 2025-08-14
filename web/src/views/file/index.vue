@@ -205,77 +205,42 @@
       </div>
 
       <!-- 右侧文件列表 -->
-      <div class="flex-1 overflow-y-auto">
-        <div class="p-6">
-          <!-- 列表视图 -->
-          <table v-if="viewMode === 'list'"
-            class="min-w-full divide-y divide-base-200 bg-base-100 shadow-sm rounded-lg">
-            <thead>
-              <tr class="bg-base-100">
-                <th scope="col"
-                  class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-5/12">
-                  名称</th>
-                <th scope="col"
-                  class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-2/12">
-                  修改日期</th>
-                <th scope="col"
-                  class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-2/12">
-                  类型</th>
-                <th scope="col"
-                  class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-2/12">
-                  大小</th>
-                <th scope="col"
-                  class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-1/12">
-                  操作</th>
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-base-200">
-              <tr v-for="file in files" :key="file.path" class="hover:bg-base-200"
-                :class="{ 'bg-base-200': file.path === currentPreviewPath }" @click="handleFileClick(file)"
-                :data-file-path="file.path">
-                <td class="px-6 py-4 whitespace-nowrap">
-                  <div class="flex items-center">
-                    <i v-if="file.type === 'directory'" class="fas fa-folder text-yellow-400 mr-3"></i>
-                    <img v-else-if="file.mime.startsWith('image/')" :src="file.path"
-                      class="w-8 h-8 rounded object-cover mr-3">
-                    <span class="text-sm text-primary-600">{{ file.basename }}</span>
-                  </div>
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ formatDate(file.lastmod) }}</td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ file.type === 'directory' ? '文件夹' :
-                  file.mime }}</td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ formatFileSize(file.size) }}</td>
-                <td class="px-6 py-4 whitespace-nowrap text-right">
-                  <button class="text-gray-400 hover:text-gray-500" @click.stop="handleDelete(file.path)">
-                    <i class="fas fa-trash"></i>
-                  </button>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-
-          <!-- 网格视图 -->
-          <div v-else class="grid grid-cols-4 gap-4">
-            <div v-for="file in files" :key="file.path"
-              class="bg-base-100 rounded-lg shadow-sm p-4 hover:shadow-md transition-shadow cursor-pointer"
-              :class="{ 'bg-base-200': file.path === currentPreviewPath }" @click="handleFileClick(file)"
-              :data-file-path="file.path">
-              <div class="aspect-square mb-2">
-                <i v-if="file.type === 'directory'" class="fas fa-folder text-yellow-400 text-4xl"></i>
-                <img v-else-if="file.mime.startsWith('image/')" :src="file.path"
-                  class="w-full h-full object-cover rounded">
-              </div>
-              <div class="text-sm font-medium text-primary-600 truncate">{{ file.basename }}</div>
-              <div class="text-xs text-gray-500">{{ formatDate(file.lastmod) }}</div>
+      <div class="flex-1 overflow-hidden">
+        <!-- 列表视图 -->
+        <div v-if="viewMode === 'list'" class="h-full flex flex-col">
+          <!-- 表头 -->
+          <div class="bg-base-100 border-b border-base-200 px-6 py-3">
+            <div class="flex items-center">
+              <div class="w-5/12 text-xs font-medium text-gray-500 uppercase tracking-wider">名称</div>
+              <div class="w-2/12 text-xs font-medium text-gray-500 uppercase tracking-wider">修改日期</div>
+              <div class="w-2/12 text-xs font-medium text-gray-500 uppercase tracking-wider">类型</div>
+              <div class="w-2/12 text-xs font-medium text-gray-500 uppercase tracking-wider">大小</div>
+              <div class="w-1/12 text-xs font-medium text-gray-500 uppercase tracking-wider text-right">操作</div>
             </div>
           </div>
-
-          <!-- 状态栏 -->
-          <div class="mt-4 text-sm text-gray-500">
-            共 {{ files.length }} 个项目（{{files.filter(f => f.type === 'directory').length}} 个文件夹，{{files.filter(f =>
-              f.type
-            === 'file').length }} 个文件）
+          <!-- 虚拟列表内容 -->
+          <div class="flex-1">
+            <VirtualFileList
+              :files="files"
+              :view-mode="viewMode"
+              :current-preview-path="currentPreviewPath"
+              @file-click="handleFileClick"
+              @delete="handleDelete"
+            />
           </div>
+          <!-- 状态栏 -->
+          <div class="bg-base-100 border-t border-base-200 px-6 py-3 text-sm text-gray-500">
+            共 {{ files.length }} 个项目（{{ files.filter(f => f.type === 'directory').length }} 个文件夹，{{ files.filter(f => f.type === 'file').length }} 个文件）
+          </div>
+        </div>
+
+        <!-- 网格视图 -->
+        <div v-else class="h-full">
+          <VirtualFileGrid
+            :files="files"
+            :current-preview-path="currentPreviewPath"
+            @file-click="handleFileClick"
+          />
         </div>
       </div>
       <!-- 添加图片预览组件 -->
@@ -288,7 +253,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, nextTick } from 'vue'
 import { webdavApi, type WebDAVFile } from '@/api/webdav'
 import { 
   fileApi, 
@@ -304,6 +269,9 @@ import {
 } from '@/api/file'
 import { useRouter } from 'vue-router'
 import ImagePreview from '@/components/ImagePreview.vue'
+import LazyImage from '@/components/LazyImage.vue'
+import VirtualFileList from '@/components/VirtualFileList.vue'
+import VirtualFileGrid from '@/components/VirtualFileGrid.vue'
 import notify from '@/components/notify'
 
 const router = useRouter()
@@ -316,6 +284,7 @@ interface WebDAVResponse {
     name: string;
     is_collection: boolean;
     path: string;
+    url: string;
     last_modified: string;
     type: 'file' | 'directory';
   }>;
@@ -393,9 +362,10 @@ const loadDirectory = async (path: string) => {
     const response = await webdavApi.listDirectory(path)
     const webDAVResponse = response as unknown as WebDAVResponse
     // 处理返回的数据结构
-    files.value = webDAVResponse.children.map(item => ({
+    const newFiles = webDAVResponse.children.map(item => ({
       name: item.name,
       path: item.path,
+      url: item.url,
       type: item.type,
       basename: item.name,
       lastmod: item.last_modified,
@@ -403,6 +373,22 @@ const loadDirectory = async (path: string) => {
       size: 0,
       etag: '' // 添加必需的etag字段
     }))
+    
+    // 分批渲染文件，避免一次性渲染大量文件导致卡顿
+    files.value = []
+    await nextTick()
+    
+    const batchSize = 50
+    for (let i = 0; i < newFiles.length; i += batchSize) {
+      const batch = newFiles.slice(i, i + batchSize)
+      files.value.push(...batch)
+      await nextTick()
+      
+      // 小延迟让浏览器有时间渲染
+      if (i + batchSize < newFiles.length) {
+        await new Promise(resolve => setTimeout(resolve, 10))
+      }
+    }
   } catch (error: any) {
     console.error('加载目录失败:', error)
     // 如果是认证错误，重定向到登录页

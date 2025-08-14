@@ -212,6 +212,7 @@ class DavView(View):
                         'name': child.displayname,
                         'is_collection': child.is_collection,
                         'path': child.get_path(),
+                        'url': "http://127.0.0.1:8000/media" + child.get_path(), 
                         'last_modified': child.getlastmodified,
                         'type': 'file' if child.is_object else 'directory'
                     })

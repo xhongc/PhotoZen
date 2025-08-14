@@ -14,6 +14,7 @@ export interface WebDAVFile {
   mime: string
   etag: string
   path: string
+  url: string
 }
 
 export const webdavApi = {
