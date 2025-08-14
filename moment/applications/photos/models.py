@@ -62,3 +62,53 @@ class Location(models.Model):
 
     def __str__(self):
         return self.name
+
+class PhotoMetadata(models.Model):
+    """照片自定义元数据字段"""
+    FIELD_TYPES = [
+        ('text', '文本'),
+        ('number', '数字'),
+        ('date', '日期'),
+        ('boolean', '布尔值'),
+        ('json', 'JSON数据'),
+    ]
+    
+    photo = models.ForeignKey(Photo, on_delete=models.CASCADE, related_name='custom_metadata')
+    key = models.CharField(max_length=100, help_text='字段键名')
+    name = models.CharField(max_length=200, help_text='字段显示名称')
+    value = models.TextField(help_text='字段值')
+    field_type = models.CharField(max_length=20, choices=FIELD_TYPES, default='text')
+    created_time = models.DateTimeField(auto_now_add=True)
+    updated_time = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        unique_together = ('photo', 'key')
+        ordering = ['created_time']
+    
+    def __str__(self):
+        return f"{self.photo.title} - {self.name}"
+    
+    def get_typed_value(self):
+        """根据字段类型返回适当类型的值"""
+        import json
+        from datetime import datetime
+        
+        if self.field_type == 'number':
+            try:
+                return float(self.value)
+            except ValueError:
+                return 0
+        elif self.field_type == 'boolean':
+            return self.value.lower() in ('true', '1', 'yes', 'on')
+        elif self.field_type == 'date':
+            try:
+                return datetime.fromisoformat(self.value)
+            except ValueError:
+                return None
+        elif self.field_type == 'json':
+            try:
+                return json.loads(self.value)
+            except json.JSONDecodeError:
+                return {}
+        else:
+            return self.value

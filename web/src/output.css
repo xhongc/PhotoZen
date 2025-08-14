@@ -4796,6 +4796,10 @@ html:has(.drawer-toggle:checked) {
   margin-top: auto;
 }
 
+.-mb-px {
+  margin-bottom: -1px;
+}
+
 .block {
   display: block;
 }
@@ -5026,6 +5030,10 @@ html:has(.drawer-toggle:checked) {
 
 .w-px {
   width: 1px;
+}
+
+.w-96 {
+  width: 24rem;
 }
 
 .min-w-0 {
@@ -6349,6 +6357,11 @@ html:has(.drawer-toggle:checked) {
 .hover\:text-red-900:hover {
   --tw-text-opacity: 1;
   color: rgb(127 29 29 / var(--tw-text-opacity, 1));
+}
+
+.hover\:text-red-700:hover {
+  --tw-text-opacity: 1;
+  color: rgb(185 28 28 / var(--tw-text-opacity, 1));
 }
 
 .hover\:shadow-lg:hover {

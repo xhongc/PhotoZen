@@ -67,6 +67,68 @@ export interface PhotoUpdateParams {
   is_favorite?: boolean
 }
 
+export interface MetadataField {
+  name: string
+  value: any
+  editable: boolean
+  field_type?: string
+}
+
+export interface PhotoMetadata {
+  basic_info: Record<string, any>
+  exif_data: Record<string, MetadataField>
+  custom_fields: Record<string, MetadataField>
+}
+
+export interface ExifData {
+  data: Record<string, any>
+}
+
+export interface CustomFieldData {
+  key: string
+  name: string
+  value: string
+  field_type: 'text' | 'number' | 'date' | 'boolean' | 'json'
+}
+
+export interface CustomFieldUpdate {
+  value: string
+}
+
+export interface ExifFieldUpdate {
+  tag: string
+  value: string
+}
+
+export interface GPSCoordinates {
+  latitude: number
+  longitude: number
+}
+
+export interface CameraInfo {
+  make: string
+  model: string
+  software: string
+  lens_model: string
+}
+
+export interface ShootingParameters {
+  aperture: any
+  shutter_speed: any
+  iso: any
+  focal_length: any
+  flash: any
+  white_balance: any
+  exposure_mode: any
+  metering_mode: any
+}
+
+export interface MetadataResponse {
+  success: boolean
+  message: string
+  data?: Record<string, any>
+}
+
 export const photoApi = {
   // 获取照片列表
   getPhotos(params?: PhotoListParams): Promise<PhotoGroup[]> {
@@ -119,5 +181,56 @@ export const photoApi = {
   // 获取照片文件
   getPhotoFile(id: number): Promise<Blob> {
     return api.get(`/photos/${id}/file`, { responseType: 'blob' }).then(response => response.data)
+  },
+
+  // === 元数据相关 API ===
+  // 获取照片完整元数据
+  getMetadata(id: number): Promise<PhotoMetadata> {
+    return api.get(`/photos/${id}/metadata`).then(response => response.data)
+  },
+
+  // 获取EXIF数据
+  getExifData(id: number): Promise<ExifData> {
+    return api.get(`/photos/${id}/metadata/exif`).then(response => response.data)
+  },
+
+  // 更新EXIF字段
+  updateExifField(id: number, data: ExifFieldUpdate): Promise<MetadataResponse> {
+    return api.put(`/photos/${id}/metadata/exif`, data).then(response => response.data)
+  },
+
+  // 添加自定义字段
+  addCustomField(id: number, data: CustomFieldData): Promise<any> {
+    return api.post(`/photos/${id}/metadata/custom`, data).then(response => response.data)
+  },
+
+  // 更新自定义字段
+  updateCustomField(id: number, key: string, data: CustomFieldUpdate): Promise<MetadataResponse> {
+    return api.put(`/photos/${id}/metadata/custom/${key}`, data).then(response => response.data)
+  },
+
+  // 删除自定义字段
+  deleteCustomField(id: number, key: string): Promise<MetadataResponse> {
+    return api.delete(`/photos/${id}/metadata/custom/${key}`).then(response => response.data)
+  },
+
+  // 获取GPS坐标
+  getGPSCoordinates(id: number): Promise<GPSCoordinates | null> {
+    return api.get(`/photos/${id}/metadata/gps`).then(response => response.data)
+  },
+
+  // 获取相机信息
+  getCameraInfo(id: number): Promise<CameraInfo> {
+    return api.get(`/photos/${id}/metadata/camera`).then(response => response.data)
+  },
+
+  // 获取拍摄参数
+  getShootingParameters(id: number): Promise<ShootingParameters> {
+    return api.get(`/photos/${id}/metadata/shooting`).then(response => response.data)
+  },
+
+  // 获取所有自定义字段
+  getCustomFields(id: number): Promise<any[]> {
+    return api.get(`/photos/${id}/metadata/custom`).then(response => response.data)
   }
 }

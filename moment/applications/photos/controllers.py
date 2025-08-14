@@ -3,6 +3,12 @@ from applications.photos.schema import (
     PhotoSchema, PhotoUploadSchema, PhotoUpdateSchema,
     PhotoRatingSchema, LocationSchema
 )
+from applications.photos.metadata_schema import (
+    PhotoMetadataSchema, ExifDataSchema, CustomFieldCreateSchema,
+    CustomFieldUpdateSchema, ExifFieldUpdateSchema, GPSCoordinatesSchema,
+    CameraInfoSchema, ShootingParametersSchema, MetadataResponseSchema,
+    PhotoMetadataDetailSchema
+)
 from django.contrib.auth import get_user_model
 from ninja_extra import ControllerBase
 from ninja_extra import api_controller, route
@@ -20,11 +26,13 @@ from django.db.models import Q, Exists, OuterRef
 from django.shortcuts import get_object_or_404
 from django.core.files import File
 from django.http import FileResponse
+from django.core.exceptions import ValidationError
 from PIL import Image
 import io
 import os
 
-from .models import Photo, Tag, Location, PhotoRating
+from .models import Photo, Tag, Location, PhotoRating, PhotoMetadata
+from .metadata import PhotoMetadataEditor
 
 User = get_user_model()
 
@@ -37,7 +45,7 @@ class PhotoController(ControllerBase):
 
     @route.get(
         "",
-        response=list[dict],
+        response=List[dict],
         url_name="photos",
     )
     def list(
@@ -304,3 +312,199 @@ class PhotoController(ControllerBase):
             content_type=f"image/{photo.format.lower()}",
             filename=os.path.basename(real_path)
         )
+
+    # === 元数据相关 API ===
+    @route.get(
+        "/{photo_id}/metadata",
+        response=PhotoMetadataSchema,
+        url_name="photo-metadata"
+    )
+    def get_metadata(self, photo_id: int):
+        """获取照片的完整元数据"""
+        photo = get_object_or_404(Photo, id=photo_id)
+        editor = PhotoMetadataEditor(photo)
+        
+        try:
+            metadata = editor.get_metadata()
+            return metadata
+        except Exception as e:
+            raise ValidationError(f"获取元数据失败: {str(e)}")
+    
+    @route.get(
+        "/{photo_id}/metadata/exif",
+        response=ExifDataSchema,
+        url_name="photo-exif-data"
+    )
+    def get_exif_data(self, photo_id: int):
+        """仅获取EXIF数据"""
+        photo = get_object_or_404(Photo, id=photo_id)
+        editor = PhotoMetadataEditor(photo)
+        
+        try:
+            exif_data = editor.get_exif_data()
+            return {"data": exif_data}
+        except Exception as e:
+            raise ValidationError(f"获取EXIF数据失败: {str(e)}")
+    
+    @route.put(
+        "/{photo_id}/metadata/exif",
+        response=MetadataResponseSchema,
+        url_name="update-exif-field"
+    )
+    def update_exif_field(self, photo_id: int, data: ExifFieldUpdateSchema):
+        """更新EXIF字段"""
+        photo = get_object_or_404(Photo, id=photo_id)
+        editor = PhotoMetadataEditor(photo)
+        
+        try:
+            success = editor.update_exif_field(data.tag, data.value)
+            return {
+                "success": success,
+                "message": f"EXIF字段 '{data.tag}' 更新成功" if success else "更新失败"
+            }
+        except ValidationError as e:
+            return {
+                "success": False,
+                "message": str(e)
+            }
+        except Exception as e:
+            return {
+                "success": False,
+                "message": f"更新EXIF字段失败: {str(e)}"
+            }
+    
+    @route.post(
+        "/{photo_id}/metadata/custom",
+        response=PhotoMetadataDetailSchema,
+        url_name="add-custom-field"
+    )
+    def add_custom_field(self, photo_id: int, data: CustomFieldCreateSchema):
+        """添加自定义元数据字段"""
+        photo = get_object_or_404(Photo, id=photo_id)
+        editor = PhotoMetadataEditor(photo)
+        
+        try:
+            metadata = editor.add_custom_field(
+                key=data.key,
+                name=data.name,
+                value=data.value,
+                field_type=data.field_type
+            )
+            return metadata
+        except ValidationError as e:
+            raise ValidationError(str(e))
+        except Exception as e:
+            raise ValidationError(f"添加自定义字段失败: {str(e)}")
+    
+    @route.put(
+        "/{photo_id}/metadata/custom/{field_key}",
+        response=MetadataResponseSchema,
+        url_name="update-custom-field"
+    )
+    def update_custom_field(self, photo_id: int, field_key: str, data: CustomFieldUpdateSchema):
+        """更新自定义元数据字段"""
+        photo = get_object_or_404(Photo, id=photo_id)
+        editor = PhotoMetadataEditor(photo)
+        
+        try:
+            success = editor.update_custom_field(field_key, data.value)
+            return {
+                "success": success,
+                "message": f"自定义字段 '{field_key}' 更新成功" if success else "更新失败"
+            }
+        except ValidationError as e:
+            return {
+                "success": False,
+                "message": str(e)
+            }
+        except Exception as e:
+            return {
+                "success": False,
+                "message": f"更新自定义字段失败: {str(e)}"
+            }
+    
+    @route.delete(
+        "/{photo_id}/metadata/custom/{field_key}",
+        response=MetadataResponseSchema,
+        url_name="delete-custom-field"
+    )
+    def delete_custom_field(self, photo_id: int, field_key: str):
+        """删除自定义元数据字段"""
+        photo = get_object_or_404(Photo, id=photo_id)
+        editor = PhotoMetadataEditor(photo)
+        
+        try:
+            success = editor.remove_custom_field(field_key)
+            return {
+                "success": success,
+                "message": f"自定义字段 '{field_key}' 删除成功" if success else "删除失败"
+            }
+        except Exception as e:
+            return {
+                "success": False,
+                "message": f"删除自定义字段失败: {str(e)}"
+            }
+    
+    @route.get(
+        "/{photo_id}/metadata/gps",
+        response=Optional[GPSCoordinatesSchema],
+        url_name="photo-gps-coordinates"
+    )
+    def get_gps_coordinates(self, photo_id: int):
+        """获取照片GPS坐标"""
+        photo = get_object_or_404(Photo, id=photo_id)
+        editor = PhotoMetadataEditor(photo)
+        
+        try:
+            coordinates = editor.get_gps_coordinates()
+            if coordinates:
+                return {
+                    "latitude": coordinates[0],
+                    "longitude": coordinates[1]
+                }
+            return None
+        except Exception as e:
+            raise ValidationError(f"获取GPS坐标失败: {str(e)}")
+    
+    @route.get(
+        "/{photo_id}/metadata/camera",
+        response=CameraInfoSchema,
+        url_name="photo-camera-info"
+    )
+    def get_camera_info(self, photo_id: int):
+        """获取相机信息"""
+        photo = get_object_or_404(Photo, id=photo_id)
+        editor = PhotoMetadataEditor(photo)
+        
+        try:
+            camera_info = editor.get_camera_info()
+            return camera_info
+        except Exception as e:
+            raise ValidationError(f"获取相机信息失败: {str(e)}")
+    
+    @route.get(
+        "/{photo_id}/metadata/shooting",
+        response=ShootingParametersSchema,
+        url_name="photo-shooting-parameters"
+    )
+    def get_shooting_parameters(self, photo_id: int):
+        """获取拍摄参数"""
+        photo = get_object_or_404(Photo, id=photo_id)
+        editor = PhotoMetadataEditor(photo)
+        
+        try:
+            shooting_params = editor.get_shooting_parameters()
+            return shooting_params
+        except Exception as e:
+            raise ValidationError(f"获取拍摄参数失败: {str(e)}")
+    
+    @route.get(
+        "/{photo_id}/metadata/custom",
+        response=List[PhotoMetadataDetailSchema],
+        url_name="photo-custom-fields"
+    )
+    def get_custom_fields(self, photo_id: int):
+        """获取所有自定义字段"""
+        photo = get_object_or_404(Photo, id=photo_id)
+        custom_fields = photo.custom_metadata.all()
+        return list(custom_fields)
