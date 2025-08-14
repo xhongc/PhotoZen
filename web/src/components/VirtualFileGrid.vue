@@ -1,34 +1,36 @@
 <template>
-  <div class="p-6">
-    <SimpleVirtualList 
-      :items="chunkedFiles"
-      :item-height="240"
-      :get-key="(index) => `row-${index}`"
-    >
-      <template #default="{ item: rowFiles }">
-        <div class="grid grid-cols-4 gap-4 mb-4">
-          <div v-for="file in rowFiles" :key="file.path"
-            class="bg-base-100 rounded-lg shadow-sm p-4 hover:shadow-md transition-shadow cursor-pointer"
-            :class="{ 'bg-base-200': file.path === currentPreviewPath }" 
-            @click="$emit('fileClick', file)"
-            :data-file-path="file.path">
-            <div class="aspect-square mb-2 flex items-center justify-center">
-              <i v-if="file.type === 'directory'" class="fas fa-folder text-yellow-400 text-4xl"></i>
-              <LazyImage v-else-if="file.mime.startsWith('image/')" :src="file.url"
-                class="w-full h-full object-cover rounded" 
-                quality="medium" :priority="false" />
+  <div style="height: 100%; display: flex; flex-direction: column;">
+    <div style="flex: 1; min-height: 0; padding: 24px;">
+      <SimpleVirtualList 
+        :items="chunkedFiles"
+        :item-height="240"
+        :get-key="(index) => `row-${index}`"
+      >
+        <template #default="{ item: rowFiles }">
+          <div class="grid grid-cols-4 gap-4 mb-4">
+            <div v-for="file in rowFiles" :key="file.path"
+              class="bg-base-100 rounded-lg shadow-sm p-4 hover:shadow-md transition-shadow cursor-pointer"
+              :class="{ 'bg-base-200': file.path === currentPreviewPath }" 
+              @click="$emit('fileClick', file)"
+              :data-file-path="file.path">
+              <div class="aspect-square mb-2 flex items-center justify-center">
+                <i v-if="file.type === 'directory'" class="fas fa-folder text-yellow-400 text-4xl"></i>
+                <LazyImage v-else-if="file.mime.startsWith('image/')" :src="file.url"
+                  class="w-full h-full object-cover rounded" 
+                  quality="medium" :priority="false" />
+              </div>
+              <div class="text-sm font-medium text-primary-600 truncate">{{ file.basename }}</div>
+              <div class="text-xs text-gray-500">{{ formatDate(file.lastmod) }}</div>
             </div>
-            <div class="text-sm font-medium text-primary-600 truncate">{{ file.basename }}</div>
-            <div class="text-xs text-gray-500">{{ formatDate(file.lastmod) }}</div>
+            <!-- 补齐空白格子 -->
+            <div v-for="n in (4 - rowFiles.length)" :key="`empty-${n}`" class="invisible"></div>
           </div>
-          <!-- 补齐空白格子 -->
-          <div v-for="n in (4 - rowFiles.length)" :key="`empty-${n}`" class="invisible"></div>
-        </div>
-      </template>
-    </SimpleVirtualList>
+        </template>
+      </SimpleVirtualList>
+    </div>
     
     <!-- 状态栏 -->
-    <div class="mt-4 text-sm text-gray-500">
+    <div class="bg-base-100 border-t border-base-200 px-6 py-3 text-sm text-gray-500" style="flex-shrink: 0;">
       共 {{ files.length }} 个项目（{{ files.filter(f => f.type === 'directory').length }} 个文件夹，{{ files.filter(f => f.type === 'file').length }} 个文件）
     </div>
   </div>

@@ -205,11 +205,11 @@
       </div>
 
       <!-- 右侧文件列表 -->
-      <div class="flex-1 overflow-hidden">
+      <div class="flex-1 flex flex-col overflow-hidden">
         <!-- 列表视图 -->
-        <div v-if="viewMode === 'list'" class="h-full flex flex-col">
+        <div v-if="viewMode === 'list'" class="flex-1 flex flex-col overflow-hidden">
           <!-- 表头 -->
-          <div class="bg-base-100 border-b border-base-200 px-6 py-3">
+          <div class="bg-base-100 border-b border-base-200 px-6 py-3 flex-shrink-0">
             <div class="flex items-center">
               <div class="w-5/12 text-xs font-medium text-gray-500 uppercase tracking-wider">名称</div>
               <div class="w-2/12 text-xs font-medium text-gray-500 uppercase tracking-wider">修改日期</div>
@@ -219,7 +219,7 @@
             </div>
           </div>
           <!-- 虚拟列表内容 -->
-          <div class="flex-1">
+          <div class="flex-1 overflow-hidden">
             <VirtualFileList
               :files="files"
               :view-mode="viewMode"
@@ -229,13 +229,13 @@
             />
           </div>
           <!-- 状态栏 -->
-          <div class="bg-base-100 border-t border-base-200 px-6 py-3 text-sm text-gray-500">
+          <div class="bg-base-100 border-t border-base-200 px-6 py-3 text-sm text-gray-500 flex-shrink-0">
             共 {{ files.length }} 个项目（{{ files.filter(f => f.type === 'directory').length }} 个文件夹，{{ files.filter(f => f.type === 'file').length }} 个文件）
           </div>
         </div>
 
         <!-- 网格视图 -->
-        <div v-else class="h-full">
+        <div v-else class="flex-1 overflow-hidden">
           <VirtualFileGrid
             :files="files"
             :current-preview-path="currentPreviewPath"

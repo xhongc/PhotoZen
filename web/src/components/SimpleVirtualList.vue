@@ -1,5 +1,5 @@
 <template>
-  <div ref="scrollContainer" @scroll="onScroll" class="w-full h-full overflow-auto">
+  <div ref="scrollContainer" @scroll="onScroll" style="width: 100%; height: 100%; overflow-y: auto; overflow-x: hidden;">
     <div :style="{ height: totalHeight + 'px', position: 'relative' }">
       <div 
         v-for="(item, index) in visibleItems" 
@@ -8,8 +8,7 @@
           position: 'absolute',
           top: item.top + 'px',
           left: '0',
-          width: '100%',
-          transform: `translateY(0px)`
+          width: '100%'
         }"
       >
         <slot :item="items[item.index]" :index="item.index" />
@@ -41,7 +40,10 @@ const scrollTop = ref(0)
 const totalHeight = computed(() => props.items.length * props.itemHeight)
 
 const containerHeight = computed(() => {
-  return scrollContainer.value?.clientHeight || props.containerHeight
+  if (scrollContainer.value) {
+    return scrollContainer.value.clientHeight
+  }
+  return props.containerHeight
 })
 
 const visibleStartIndex = computed(() => {
@@ -80,10 +82,29 @@ const onScroll = () => {
   }
 }
 
+const updateScrollPosition = () => {
+  if (scrollContainer.value) {
+    scrollTop.value = scrollContainer.value.scrollTop
+  }
+}
+
 onMounted(() => {
   nextTick(() => {
+    updateScrollPosition()
+    // 监听容器大小变化
     if (scrollContainer.value) {
-      scrollTop.value = scrollContainer.value.scrollTop
+      const resizeObserver = new ResizeObserver(() => {
+        // 当容器大小改变时，重新计算
+        nextTick(() => {
+          updateScrollPosition()
+        })
+      })
+      resizeObserver.observe(scrollContainer.value)
+      
+      // 在组件卸载时清理
+      onBeforeUnmount(() => {
+        resizeObserver.disconnect()
+      })
     }
   })
 })

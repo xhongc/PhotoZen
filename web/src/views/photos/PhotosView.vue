@@ -1,8 +1,8 @@
 <template>
   <!-- 主内容区 -->
-  <main class="h-screen-header overflow-y-auto" ref="photoView">
+  <div class="h-screen-header flex flex-col">
     <!-- 筛选工具栏 -->
-    <div class="border-b border-base-200">
+    <div class="border-b border-base-200 flex-shrink-0">
       <div class="max-w-full mx-auto px-4 sm:px-6 lg:px-8 pt-4">
         <div class="flex items-center justify-between">
           <div class="flex items-center space-x-4">
@@ -43,7 +43,7 @@
     </div>
 
     <!-- 批量操作工具栏 -->
-    <div v-if="isSelectMode" class="bg-white border-b border-gray-200 fixed top-3 left-0 right-0 z-10 rounded-xl">
+    <div v-if="isSelectMode" class="bg-white border-b border-gray-200 flex-shrink-0">
       <div class="max-w-full mx-auto px-4 sm:px-6 lg:px-8 py-3">
         <div class="flex items-center justify-between">
           <div class="flex items-center space-x-4">
@@ -70,26 +70,27 @@
       </div>
     </div>
 
-    <!-- 主内容区域 -->
-    <div class="flex">
+    <!-- 主内容区域 - 可滚动 -->
+    <div class="flex-1 overflow-y-auto" ref="photoView" @scroll="handleScroll">
       <!-- 照片墙 -->
-      <div class="flex-1 px-4 sm:px-6 lg:px-8 py-8">
-        <div class="max-w-full mx-auto">
-          <template v-if="loading">
-            <div class="flex justify-center items-center h-64">
-              <i class="fas fa-spinner fa-spin text-4xl text-primary-500"></i>
-            </div>
-          </template>
+      <div class="px-4 sm:px-6 lg:px-8 py-8">
+        <template v-if="loading">
+          <div class="flex justify-center items-center h-64">
+            <i class="fas fa-spinner fa-spin text-4xl text-primary-500"></i>
+          </div>
+        </template>
 
-          <template v-else-if="error">
-            <div class="text-center text-red-500 py-8">
-              {{ error }}
-            </div>
-          </template>
+        <template v-else-if="error">
+          <div class="text-center text-red-500 py-8">
+            {{ error }}
+          </div>
+        </template>
 
-          <template v-else>
-            <VirtualPhotoGroupGrid
-              :photo-groups="photos"
+        <template v-else>
+          <!-- 使用简单的渲染而非虚拟滚动 -->
+          <div v-for="group in photos" :key="group.date_key" class="mb-12">
+            <PhotoGroupCard
+              :group="group"
               :current-view="currentView"
               :is-select-mode="isSelectMode"
               :selected-photos="selectedPhotos"
@@ -100,8 +101,8 @@
               @toggle-favorite="handleToggleFavorite"
               @edit-photo="handleEditPhoto"
             />
-          </template>
-        </div>
+          </div>
+        </template>
       </div>
     </div>
 
@@ -121,7 +122,7 @@
           p-id="2400"></path>
       </svg>
     </button>
-  </main>
+  </div>
   <dialog ref="addToAlbumDialog" class="modal modal-bottom sm:modal-middle">
   <div class="modal-box">
     <h3 class="text-lg font-bold">添加到相册</h3>
@@ -144,7 +145,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted, computed, watch, onUnmounted, onActivated, onDeactivated } from 'vue'
-import VirtualPhotoGroupGrid from '@/components/VirtualPhotoGroupGrid.vue'
+import PhotoGroupCard from '@/components/PhotoGroupCard.vue'
 import { photoApi, type PhotoListParams, type PhotoGroup } from '@/api/photos'
 import { albumApi, type Album } from '@/api/albums'
 import { useRouter } from 'vue-router'
@@ -275,6 +276,7 @@ const handleScroll = () => {
     }
   }
 }
+
 const scrollToTop = () => {
   photoView.value?.scrollTo({ top: 0, behavior: 'smooth' })
 }
